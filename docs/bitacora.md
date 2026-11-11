@@ -135,3 +135,16 @@ Problemas y correcciones:
   `EN_CURSO` en `PASE_CONTROL`. Corregido: se verifica el cliente antes de registrar nada y un error al lanzar el
   cliente se trata como error del pase. La fila `EN_CURSO` bloquea la reejecución hasta un `--reintentar`
   explícito (protección para ejecuciones interrumpidas), que es lo que pasó y cómo se retoma.
+- Segundo intento (`rel-QA-B1-20261111-3`, con la corrección): `pases.py` se negó limpiamente ("no se encuentra el
+  cliente SQL"), sin registrar nada. Causa: con `run.sh` el runner **no lee `.path`** (eso es solo para el
+  servicio); el job hereda el entorno del proceso que lanza el runner. `scripts/runners.sh` ahora exporta
+  `JAVA_HOME` y `PATH` antes de lanzar. Se relanzó el mismo job (sin etiqueta nueva: el defecto era del ejecutor,
+  no del repositorio).
+- Tercer intento: **OK**. Corrió en `lab-qa`, retomó el 0001 en el intento 2 ("reanuda tras EN_CURSO con
+  rel-QA-B1-20261111-2") por el `reintentar` pedido, y aplicó 0002 a 0004. Entrega completa; evidencia publicada
+  como artefacto `evidencia-qa-rel-QA-B1-20261111-3-2`; pide un reinicio de INSIS GEN (0003, 0004).
+- Promoción: `tools/ci/verificar-qa.sh` reconoce el commit `9cba96e` (despliegue exitoso en QA) y rechaza
+  `b2894e5` (la etiqueta manual de la Fase 3, que nunca pasó por el pipeline).
+
+Aceptación de la fase: un PR a `Desa` corre la Compuerta; `liberar.yml` crea `rel-QA-B1-AAAAMMDD[-N]`;
+`desplegar.yml` sobre la etiqueta pide aprobación, corre en el runner QA y publica la evidencia. Cumplida.
