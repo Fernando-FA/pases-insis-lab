@@ -23,9 +23,9 @@ db/setup/                                esquemas demo, usuario INSIS_DEPLOY y P
 
 ```
 PR a Desa ──► Compuerta (pr-validacion.yml) ──► merge
-Liberar (qa)  ──► rel-QA-B1-AAAAMMDD[-N]  ──► Desplegar qa  ──► aprobación ──► runner QA ──► BD QA
-Liberar (prd) ──► rel-PRD-B1-AAAAMMDD[-N] (mismo commit, solo si QA quedó completo)
-              ──► Desplegar prd (número de cambio) ──► aprobación ──► runner PRD ──► BD PRD
+Liberar ──► rel-QA-B1-AAAAMMDD[-N] ──► Desplegar qa  ──► aprobación ──► runner QA  ──► BD QA
+                     │ (la MISMA etiqueta, solo si quedó completa en QA)
+                     └──────────────► Desplegar prd (número de cambio) ──► aprobación ──► runner PRD ──► BD PRD
 ```
 
 ## Uso local

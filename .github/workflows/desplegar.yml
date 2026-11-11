@@ -1,5 +1,5 @@
 # Ejecuta una etiqueta en un ambiente (secciones 4 a 8 de la guía), la revierte o arma el paquete manual.
-# Se lanza SIEMPRE sobre una etiqueta: rel-QA-* para qa, rel-PRD-* para prd.
+# Se lanza SIEMPRE sobre una etiqueta rel-QA-*. PRD instala la MISMA etiqueta que ya se desplegó completa en QA.
 name: Desplegar pases
 run-name: "${{ inputs.accion }} ${{ inputs.ambiente }} · ${{ github.ref_name }}"
 
@@ -54,8 +54,8 @@ jobs:
             echo "::error title=Etiqueta::Se ejecuta una etiqueta, nunca una rama (se lanzó sobre ${REF_NAME})"
             exit 1
           fi
-          if [[ ! "$REF_NAME" =~ ^rel-${AMB^^}-([A-Z0-9]+)-[0-9]{8}(-[0-9]+)?$ ]]; then
-            echo "::error title=Etiqueta::${REF_NAME} no es una etiqueta rel-${AMB^^}-<ENTREGA>-<AAAAMMDD>[-N]"
+          if [[ ! "$REF_NAME" =~ ^rel-QA-([A-Z0-9]+)-[0-9]{8}(-[0-9]+)?$ ]]; then
+            echo "::error title=Etiqueta::${REF_NAME} no es una etiqueta liberada rel-QA-<ENTREGA>-<AAAAMMDD>[-N] (QA y PRD instalan la misma)"
             exit 1
           fi
           echo "entrega=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"

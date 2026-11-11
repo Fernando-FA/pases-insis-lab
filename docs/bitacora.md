@@ -148,3 +148,18 @@ Problemas y correcciones:
 
 Aceptación de la fase: un PR a `Desa` corre la Compuerta; `liberar.yml` crea `rel-QA-B1-AAAAMMDD[-N]`;
 `desplegar.yml` sobre la etiqueta pide aprobación, corre en el runner QA y publica la evidencia. Cumplida.
+
+## Fase 6 — Decisión: PRD instala la misma etiqueta de QA (11-11-2026)
+
+Al promover a PRD, `liberar.yml` no pudo crear `rel-PRD-B1-20261111` sobre el commit de la `-3`: GitHub rechaza que
+el `GITHUB_TOKEN` cree una referencia sobre un commit cuyos workflows difieren de los actuales ("refusing to allow a
+GitHub App to create or update workflow ... without `workflows` permission"). Pasaría cada vez que cambie un workflow
+mientras una entrega espera en QA. Crear la etiqueta de PRD exigiría una identidad con permisos de workflows
+(GitHub App o deploy key) o un paso manual.
+
+Decisión: **QA y PRD instalan la misma etiqueta `rel-QA-…`**. Lo instalado en PRD es lo probado en QA por
+construcción. PRD exige que ese commit tenga un despliegue completo y exitoso en QA, número de cambio y aprobación.
+El hito "se instaló en PRD" queda en el despliegue de GitHub (aprobador, fecha, número de cambio) y en `PASE_CONTROL`.
+- `liberar.yml` solo libera para QA. `desplegar.yml` y `pases.py` aceptan solo `rel-QA-*`; los environments
+  `prd` y `prd-rollback` restringen a `rel-QA-*`.
+- Pendiente confirmar con Pacífico cómo se hace hoy el pase a PRD (la guía v1.7 solo describe QA).

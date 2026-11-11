@@ -596,8 +596,9 @@ def verificar_version(raiz: Path, etiqueta: str, ambiente: str, entrega: str, co
     if not m:
         raise ErrorPases(f"'{etiqueta}' no es una etiqueta de entrega rel-<AMB>-<ENTREGA>-<AAAAMMDD>[-N]. "
                          "Se ejecuta una etiqueta, nunca una rama")
-    if m["amb"] != ambiente.upper():
-        raise ErrorPases(f"la etiqueta {etiqueta} es del ambiente {m['amb']}, no de {ambiente.upper()}")
+    if m["amb"] != "QA":
+        raise ErrorPases(f"la etiqueta {etiqueta} no es una versión liberada en QA (rel-QA-...). QA y PRD instalan "
+                         f"la misma etiqueta: la que se liberó y se probó en QA")
     if m["entrega"] != entrega:
         raise ErrorPases(f"la etiqueta {etiqueta} es de la entrega {m['entrega']}, no de {entrega}")
     if git(raiz, "cat-file", "-t", etiqueta) != "tag":
