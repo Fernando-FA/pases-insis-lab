@@ -114,3 +114,24 @@ Hallazgos:
   coincide con la salida de SQLcl 26.3.
 - SQLcl escribe `Picked up JAVA_TOOL_OPTIONS` en la consola por `-Dfile.encoding=UTF-8`; queda en la salida de
   consola (02_CONTROLES), no en el log del pase.
+
+## Fase 5 — GitHub: environments, runners y workflows (11-11-2026)
+
+Hecho:
+- Environments con revisor obligatorio (yo, sin *prevent self-review*) y restricción de referencias:
+  `liberacion` (rama `Desa`), `qa` y `qa-rollback` (etiquetas `rel-QA-*`), `prd` y `prd-rollback` (`rel-PRD-*`).
+- Variables por environment (`PASES_DB_USER`, `PASES_DB_DSN`, `PASES_ESQUEMA_CONTROL`, `PASES_CLIENTE=sql`) y
+  secreto `PASES_DB_PASSWORD` cargado desde `.env` por entrada estándar.
+- Aprobación obligatoria de workflows para PRs de forks (el repo es público y tiene runners propios).
+- Runners propios v2.338.2 (checksum verificado) en `~/actions-runner-qa` (`insis-db,qa`) y
+  `~/actions-runner-prd` (`insis-db,prd`), en segundo plano con `scripts/runners.sh iniciar|detener|estado`.
+  Requirió `libicu78` (`sudo apt-get install -y libicu78`).
+- `liberar.yml` (qa) aprobado → etiqueta anotada `rel-QA-B1-20261111-2` con alcance y resultado de la compuerta.
+
+Problemas y correcciones:
+- Primer `desplegar.yml` en QA falló: el runner no tenía SQLcl en el PATH. `config.sh` reescribe `.path`/`.env`
+  con el entorno del momento; hay que escribirlos **después** de configurar el runner (y sin rutas de Windows).
+- Ese fallo mostró un defecto de `pases.py`: si el cliente SQL no existe se caía con traceback dejando el pase
+  `EN_CURSO` en `PASE_CONTROL`. Corregido: se verifica el cliente antes de registrar nada y un error al lanzar el
+  cliente se trata como error del pase. La fila `EN_CURSO` bloquea la reejecución hasta un `--reintentar`
+  explícito (protección para ejecuciones interrumpidas), que es lo que pasó y cómo se retoma.

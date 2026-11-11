@@ -749,6 +749,9 @@ def correr_cliente(cliente: list[str], usuario: str, clave: str, dsn: str, scrip
         except subprocess.TimeoutExpired:
             out.write(f"\n[{HERRAMIENTA}] tiempo de espera agotado ({timeout} s)\n")
             return 124
+        except OSError as e:
+            out.write(f"\n[{HERRAMIENTA}] no se pudo ejecutar el cliente {cliente[0]}: {e}\n")
+            return 127
 
 
 ERROR_LINEA_RE = re.compile(r"(ORA-\d{5}|SP2-\d{4}|OS Message)")
@@ -947,6 +950,13 @@ def comprobar_usuario(usuario: str) -> None:
         raise ErrorPases(f"no se ejecutan pases con {usuario}: usar el usuario de despliegue")
 
 
+def comprobar_cliente(cliente: list[str]) -> None:
+    """Antes de registrar nada en PASE_CONTROL: el cliente SQL tiene que existir en el PATH del ejecutor."""
+    if not cliente or not shutil.which(cliente[0]):
+        raise ErrorPases(f"no se encuentra el cliente SQL '{cliente[0] if cliente else ''}' en el PATH "
+                         "(PASES_CLIENTE / --cliente); no se ejecuta nada")
+
+
 def cmd_ejecutar(args, control=None, cliente: list[str] | None = None) -> int:
     raiz = Path(args.raiz).resolve()
     m = manifiesto_o_error(Path(args.manifiesto))
@@ -955,6 +965,7 @@ def cmd_ejecutar(args, control=None, cliente: list[str] | None = None) -> int:
     commit = verificar_version(raiz, args.etiqueta, args.ambiente, m.entrega, args.commit)
     control = control or control_desde_entorno(args)
     cliente = cliente or args.cliente.split()
+    comprobar_cliente(cliente)
     ctx = control.contexto()
     comprobar_usuario(ctx["usuario"])
     inicio = ahora()
@@ -1121,6 +1132,7 @@ def cmd_revertir(args, control=None, cliente: list[str] | None = None) -> int:
     commit = verificar_version(raiz, args.etiqueta, args.ambiente, m.entrega, args.commit)
     control = control or control_desde_entorno(args)
     cliente = cliente or args.cliente.split()
+    comprobar_cliente(cliente)
     ctx = control.contexto()
     comprobar_usuario(ctx["usuario"])
     amb = args.ambiente.upper()
