@@ -207,3 +207,25 @@ def test_revisar_log_formatos_sqlcl():
     assert pases.revisar_log(ok, "X", 0).resultado == "OK"
     # Código de salida 0 pero sin FIN (WHENEVER OSERROR / SQLCODE múltiplo de 256)
     assert pases.revisar_log("===== INICIO PASE X =====\n", "X", 0).resultado == "ERROR"
+
+
+def test_cliente_inexistente_no_registra_nada(repo, control):
+    """Fase 5: el runner no tenía SQLcl en el PATH y el pase quedaba EN_CURSO."""
+    args = pases.parser().parse_args(["--raiz", str(repo.raiz), "ejecutar", "--manifiesto", str(repo.manifiesto),
+                                      "--ambiente", "qa", "--etiqueta", "rel-QA-B1-20261111",
+                                      "--evidencia", str(repo.raiz.parent / "evidencia")])
+    try:
+        pases.cmd_ejecutar(args, control=control, cliente=["cliente-que-no-existe"])
+        assert False, "debió rechazar"
+    except pases.ErrorPases as e:
+        assert "no se encuentra el cliente SQL" in str(e)
+    assert control.filas == []
+
+
+def test_en_curso_bloquea_y_se_reintenta(repo, control):
+    """Un pase que quedó EN_CURSO (ejecución interrumpida) bloquea hasta que se reintente a propósito."""
+    control.filas.append(dict(ID=1, PASE="0001-10001", MODO="DEPLOY", RESULTADO="EN_CURSO", INTENTO=1,
+                              ETIQUETA="rel-QA-B1-20261111", CHECKSUM="x", ENTREGA="B1", COMMIT_SHA="abc"))
+    assert correr(repo, control, "ejecutar") == 2 and "EN_CURSO" in ultimo_error()
+    assert correr(repo, control, "ejecutar", "--reintentar", "0001-10001") == 0
+    assert control.filas[1]["INTENTO"] == 2 and estados(control) == {p: "APLICADO" for p in TODOS}
