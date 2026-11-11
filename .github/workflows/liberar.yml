@@ -1,0 +1,119 @@
+# Fija la versión de una entrega (Anexo B de la guía): etiqueta anotada rel-<AMB>-<ENTREGA>-<AAAAMMDD>[-N].
+#   qa : sobre el HEAD de Desa, solo si la compuerta pasa.
+#   prd: sobre el MISMO commit de una etiqueta rel-QA-* que ya se desplegó completa en QA.
+name: Liberar entrega
+
+on:
+  workflow_dispatch:
+    inputs:
+      ambiente:
+        description: Ambiente de la etiqueta
+        type: choice
+        options: [qa, prd]
+        required: true
+      entrega:
+        description: Entrega (carpeta releases/<entrega>)
+        type: string
+        default: B1
+        required: true
+      etiqueta_qa:
+        description: Solo PRD - etiqueta rel-QA-... desplegada con éxito en QA
+        type: string
+        required: false
+      alcance:
+        description: Alcance de la entrega (va en el mensaje de la etiqueta)
+        type: string
+        required: false
+
+permissions:
+  contents: write
+  deployments: read
+
+concurrency:
+  group: liberar-entrega
+  cancel-in-progress: false
+
+jobs:
+  liberar:
+    name: Liberar
+    runs-on: ubuntu-latest
+    environment: liberacion
+    env:
+      AMB: ${{ inputs.ambiente }}
+      ENTREGA: ${{ inputs.entrega }}
+      ETQ_QA: ${{ inputs.etiqueta_qa }}
+      ALCANCE: ${{ inputs.alcance }}
+      ACTOR: ${{ github.actor }}
+    steps:
+      - name: Solo desde Desa
+        if: github.ref != 'refs/heads/Desa'
+        run: |
+          echo "::error::La liberación se lanza desde Desa (se lanzó desde ${GITHUB_REF})"
+          exit 1
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: tools/pases/requirements.txt
+
+      - name: Dependencias
+        run: pip install -r tools/pases/requirements.txt
+
+      - name: Commit a liberar
+        id: commit
+        run: |
+          if [ "$AMB" = "qa" ]; then
+            sha=$(git rev-parse HEAD)
+          else
+            if [[ ! "$ETQ_QA" =~ ^rel-QA-${ENTREGA}-[0-9]{8}(-[0-9]+)?$ ]]; then
+              echo "::error::Para PRD indicar la etiqueta rel-QA-${ENTREGA}-AAAAMMDD[-N] desplegada en QA"
+              exit 1
+            fi
+            sha=$(git rev-parse "${ETQ_QA}^{commit}")
+          fi
+          echo "sha=${sha}" >> "$GITHUB_OUTPUT"
+          echo "Commit a liberar: ${sha}"
+
+      - name: Promoción - el commit se desplegó completo en QA
+        if: inputs.ambiente == 'prd'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: tools/ci/verificar-qa.sh "${{ steps.commit.outputs.sha }}"
+
+      - name: Compuerta sobre el commit
+        env:
+          SHA: ${{ steps.commit.outputs.sha }}
+        run: |
+          git checkout -q "$SHA"
+          python tools/pases/pases.py validar --manifiesto "releases/${ENTREGA}/manifest.yaml" | tee "$RUNNER_TEMP/compuerta.md"
+
+      - name: Crear y publicar la etiqueta anotada
+        env:
+          SHA: ${{ steps.commit.outputs.sha }}
+        run: |
+          etq=$(python tools/pases/pases.py siguiente-etiqueta --ambiente "$AMB" --entrega "$ENTREGA")
+          {
+            echo "Entrega ${ENTREGA} para ${AMB^^}"
+            echo
+            echo "Liberada por: ${ACTOR}"
+            echo "Commit: ${SHA}"
+            if [ "$AMB" = "prd" ]; then echo "Promovida desde: ${ETQ_QA} (desplegada con éxito en QA)"; fi
+            if [ -n "$ALCANCE" ]; then echo "Alcance: ${ALCANCE}"; fi
+            echo
+            cat "$RUNNER_TEMP/compuerta.md"
+          } > "$RUNNER_TEMP/mensaje.txt"
+          git config user.name "$ACTOR"
+          git config user.email "${ACTOR}@users.noreply.github.com"
+          git tag -a "$etq" "$SHA" --cleanup=verbatim -F "$RUNNER_TEMP/mensaje.txt"
+          git push origin "refs/tags/${etq}"
+          git ls-remote --tags origin "$etq"
+          {
+            echo "## Etiqueta publicada: \`${etq}\`"
+            echo
+            echo "Commit \`${SHA}\`"
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,13 @@
+#!/bin/bash
+# Crea el usuario de despliegue INSIS_DEPLOY (nunca SYS para ejecutar pases).
+# La clave llega por variable de entorno del contenedor (archivo .env, no versionado).
+set -euo pipefail
+: "${INSIS_DEPLOY_PASSWORD:?Falta INSIS_DEPLOY_PASSWORD}"
+sqlplus -s / as sysdba <<SQL
+WHENEVER SQLERROR EXIT SQL.SQLCODE
+ALTER SESSION SET CONTAINER = FREEPDB1;
+CREATE USER INSIS_DEPLOY IDENTIFIED BY "${INSIS_DEPLOY_PASSWORD}" QUOTA 50M ON USERS;
+GRANT CREATE SESSION, CREATE TABLE, CREATE VIEW TO INSIS_DEPLOY;
+GRANT SELECT_CATALOG_ROLE TO INSIS_DEPLOY;
+EXIT
+SQL

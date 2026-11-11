@@ -1,0 +1,248 @@
+# Ejecuta una etiqueta en un ambiente (secciones 4 a 8 de la guía), la revierte o arma el paquete manual.
+# Se lanza SIEMPRE sobre una etiqueta: rel-QA-* para qa, rel-PRD-* para prd.
+name: Desplegar pases
+run-name: "${{ inputs.accion }} ${{ inputs.ambiente }} · ${{ github.ref_name }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      ambiente:
+        description: Ambiente
+        type: choice
+        options: [qa, prd]
+        required: true
+      accion:
+        description: Acción
+        type: choice
+        options: [ejecutar, revertir, paquete]
+        default: ejecutar
+        required: true
+      numero_cambio:
+        description: Número de cambio ITSM (obligatorio en PRD)
+        type: string
+        required: false
+      pases_revertir:
+        description: Solo revertir - pases separados por espacio (ej. 0004-10004 0002-10002)
+        type: string
+        required: false
+      reintentar:
+        description: Pases a reintentar con la misma etiqueta (solo por decisión de CTI)
+        type: string
+        required: false
+
+permissions:
+  contents: read
+  deployments: read
+
+jobs:
+  verificar:
+    name: Verificar etiqueta
+    runs-on: ubuntu-latest
+    outputs:
+      entrega: ${{ steps.etiqueta.outputs.entrega }}
+    env:
+      AMB: ${{ inputs.ambiente }}
+      REF_TYPE: ${{ github.ref_type }}
+      REF_NAME: ${{ github.ref_name }}
+      NUMERO_CAMBIO: ${{ inputs.numero_cambio }}
+      PASES_REVERTIR: ${{ inputs.pases_revertir }}
+    steps:
+      - name: Se ejecuta una etiqueta del ambiente, nunca una rama
+        id: etiqueta
+        run: |
+          if [ "$REF_TYPE" != "tag" ]; then
+            echo "::error title=Etiqueta::Se ejecuta una etiqueta, nunca una rama (se lanzó sobre ${REF_NAME})"
+            exit 1
+          fi
+          if [[ ! "$REF_NAME" =~ ^rel-${AMB^^}-([A-Z0-9]+)-[0-9]{8}(-[0-9]+)?$ ]]; then
+            echo "::error title=Etiqueta::${REF_NAME} no es una etiqueta rel-${AMB^^}-<ENTREGA>-<AAAAMMDD>[-N]"
+            exit 1
+          fi
+          echo "entrega=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
+
+      - name: Número de cambio (PRD)
+        if: inputs.ambiente == 'prd' && inputs.accion != 'paquete'
+        run: |
+          if [ -z "${NUMERO_CAMBIO// /}" ]; then
+            echo "::error title=Número de cambio::PRD exige número de cambio ITSM"
+            exit 1
+          fi
+
+      - name: Pases a revertir
+        if: inputs.accion == 'revertir'
+        run: |
+          if [ -z "${PASES_REVERTIR// /}" ]; then
+            echo "::error::Indicar los pases a revertir"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+        if: inputs.ambiente == 'prd' && inputs.accion == 'ejecutar'
+        with:
+          sparse-checkout: tools/ci
+
+      - name: Promoción - el commit se desplegó completo en QA
+        if: inputs.ambiente == 'prd' && inputs.accion == 'ejecutar'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: tools/ci/verificar-qa.sh "$GITHUB_SHA"
+
+  paquete:
+    name: Paquete manual
+    if: inputs.accion == 'paquete'
+    needs: verificar
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: tools/pases/requirements.txt
+      - run: pip install -r tools/pases/requirements.txt
+      - name: Armar paquete
+        env:
+          ENTREGA: ${{ needs.verificar.outputs.entrega }}
+        run: >
+          python tools/pases/pases.py paquete --manifiesto "releases/${ENTREGA}/manifest.yaml"
+          --ambiente "${{ inputs.ambiente }}" --etiqueta "${{ github.ref_name }}" --salida "$RUNNER_TEMP/paquete"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: paquete-${{ inputs.ambiente }}-${{ github.ref_name }}
+          path: ${{ runner.temp }}/paquete
+
+  ejecutar:
+    name: Ejecutar en ${{ inputs.ambiente }}
+    if: inputs.accion == 'ejecutar'
+    needs: verificar
+    environment: ${{ inputs.ambiente }}
+    runs-on: [self-hosted, insis-db, "${{ inputs.ambiente }}"]
+    concurrency:
+      group: pases-bd-${{ inputs.ambiente }}
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      ENTREGA: ${{ needs.verificar.outputs.entrega }}
+      PASES_DB_USER: ${{ vars.PASES_DB_USER }}
+      PASES_DB_DSN: ${{ vars.PASES_DB_DSN }}
+      PASES_DB_PASSWORD: ${{ secrets.PASES_DB_PASSWORD }}
+      PASES_ESQUEMA_CONTROL: ${{ vars.PASES_ESQUEMA_CONTROL }}
+      PASES_CLIENTE: ${{ vars.PASES_CLIENTE || 'sql' }}
+      PASES_NUMERO_CAMBIO: ${{ inputs.numero_cambio }}
+      REINTENTAR: ${{ inputs.reintentar }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Etiqueta anotada local
+        run: git fetch --force origin "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
+
+      - name: Clave desde Key Vault (opcional)
+        if: vars.AZURE_KEYVAULT != ''
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Leer secreto de Key Vault (opcional)
+        if: vars.AZURE_KEYVAULT != ''
+        run: |
+          clave=$(az keyvault secret show --vault-name "${{ vars.AZURE_KEYVAULT }}" --name pases-insis-db --query value -o tsv)
+          echo "::add-mask::${clave}"
+          echo "PASES_DB_PASSWORD=${clave}" >> "$GITHUB_ENV"
+
+      - name: Entorno Python
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install -q -r tools/pases/requirements.txt
+
+      - name: Ejecutar pases
+        run: |
+          extra=()
+          if [ -n "${REINTENTAR// /}" ]; then read -ra r <<< "$REINTENTAR"; extra=(--reintentar "${r[@]}"); fi
+          .venv/bin/python tools/pases/pases.py ejecutar \
+            --manifiesto "releases/${ENTREGA}/manifest.yaml" \
+            --ambiente "${{ inputs.ambiente }}" \
+            --etiqueta "$GITHUB_REF_NAME" \
+            --commit "$GITHUB_SHA" \
+            --evidencia "$RUNNER_TEMP/evidencia" \
+            "${extra[@]}"
+
+      - name: Publicar evidencia
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidencia-${{ inputs.ambiente }}-${{ github.ref_name }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/evidencia
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Evidencia a Blob Storage (opcional)
+        if: always() && vars.AZURE_STORAGE_ACCOUNT != ''
+        run: >
+          az storage blob upload-batch --auth-mode login --account-name "${{ vars.AZURE_STORAGE_ACCOUNT }}"
+          --destination evidencia-pases --destination-path "${{ inputs.ambiente }}/${GITHUB_REF_NAME}/${GITHUB_RUN_ID}"
+          --source "$RUNNER_TEMP/evidencia"
+
+      - name: Limpiar
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/evidencia" DB/Releases
+
+  revertir:
+    name: Revertir en ${{ inputs.ambiente }}
+    if: inputs.accion == 'revertir'
+    needs: verificar
+    environment: ${{ inputs.ambiente }}-rollback
+    runs-on: [self-hosted, insis-db, "${{ inputs.ambiente }}"]
+    concurrency:
+      group: pases-bd-${{ inputs.ambiente }}
+      cancel-in-progress: false
+    env:
+      ENTREGA: ${{ needs.verificar.outputs.entrega }}
+      PASES_DB_USER: ${{ vars.PASES_DB_USER }}
+      PASES_DB_DSN: ${{ vars.PASES_DB_DSN }}
+      PASES_DB_PASSWORD: ${{ secrets.PASES_DB_PASSWORD }}
+      PASES_ESQUEMA_CONTROL: ${{ vars.PASES_ESQUEMA_CONTROL }}
+      PASES_CLIENTE: ${{ vars.PASES_CLIENTE || 'sql' }}
+      PASES_NUMERO_CAMBIO: ${{ inputs.numero_cambio }}
+      PASES_REVERTIR: ${{ inputs.pases_revertir }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Etiqueta anotada local
+        run: git fetch --force origin "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
+
+      - name: Entorno Python
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install -q -r tools/pases/requirements.txt
+
+      - name: Revertir pases
+        run: |
+          read -ra pases <<< "$PASES_REVERTIR"
+          .venv/bin/python tools/pases/pases.py revertir \
+            --manifiesto "releases/${ENTREGA}/manifest.yaml" \
+            --ambiente "${{ inputs.ambiente }}" \
+            --etiqueta "$GITHUB_REF_NAME" \
+            --commit "$GITHUB_SHA" \
+            --evidencia "$RUNNER_TEMP/evidencia" \
+            --pases "${pases[@]}"
+
+      - name: Publicar evidencia
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidencia-rollback-${{ inputs.ambiente }}-${{ github.ref_name }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/evidencia
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Limpiar
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/evidencia" DB/Releases

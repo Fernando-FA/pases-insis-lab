@@ -1,0 +1,38 @@
+# Compuerta en cada PR a Desa. Es el check obligatorio de la protección de la rama:
+# si falla, el PR no se puede mergear y el defecto nunca llega a una etiqueta.
+name: Compuerta de pases
+
+on:
+  pull_request:
+    branches: [Desa]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compuerta:
+    name: Compuerta
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: tools/pases/requirements.txt
+
+      - name: Dependencias
+        run: pip install -r tools/pases/requirements.txt
+
+      - name: Pruebas de la herramienta
+        run: python -m pytest tools/pases -q
+
+      - name: Compuerta sobre todos los manifiestos
+        run: python tools/pases/pases.py validar
+
+      - name: Revisar workflows
+        uses: docker://rhysd/actionlint:1.7.12
+        with:
+          args: -color
