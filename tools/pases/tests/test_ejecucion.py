@@ -104,8 +104,16 @@ def test_e9_commit_distinto_se_niega(repo, control):
 
 def test_no_ejecuta_desde_rama_ni_etiqueta_de_otro_ambiente(repo, control):
     assert correr(repo, control, "ejecutar", etiqueta="Desa") == 2
-    assert correr(repo, control, "ejecutar", etiqueta="rel-QA-B1-20261111", ambiente="prd") == 2
+    repo.etiquetar("rel-PRD-B1-20261111")
+    assert correr(repo, control, "ejecutar", etiqueta="rel-PRD-B1-20261111", ambiente="prd") == 2
+    assert "liberada en QA" in ultimo_error()
     assert control.filas == []
+
+
+def test_prd_instala_la_misma_etiqueta_de_qa(repo, control):
+    assert correr(repo, control, "ejecutar", ambiente="prd") == 0
+    assert {f["AMBIENTE"] for f in control.filas} == {"PRD"}
+    assert {f["ETIQUETA"] for f in control.filas} == {"rel-QA-B1-20261111"}
 
 
 def test_no_ejecuta_con_sys(repo, control, monkeypatch):

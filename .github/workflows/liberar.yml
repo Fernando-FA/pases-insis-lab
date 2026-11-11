@@ -1,27 +1,17 @@
-# Fija la versión de una entrega (Anexo B de la guía): etiqueta anotada rel-<AMB>-<ENTREGA>-<AAAAMMDD>[-N].
-#   qa : sobre el HEAD de Desa, solo si la compuerta pasa.
-#   prd: sobre el MISMO commit de una etiqueta rel-QA-* que ya se desplegó completa en QA.
-# Las verificaciones corren ANTES de pedir la aprobación del environment `liberacion`.
+# Fija la versión de una entrega (Anexo B de la guía): etiqueta anotada rel-QA-<ENTREGA>-<AAAAMMDD>[-N]
+# sobre el HEAD de Desa, solo si la compuerta pasa. Esa MISMA etiqueta es la que después se instala en PRD.
+# La verificación corre ANTES de pedir la aprobación del environment `liberacion`.
 name: Liberar entrega
-run-name: "liberar ${{ inputs.ambiente }} · ${{ inputs.entrega }}${{ inputs.etiqueta_qa && format(' desde {0}', inputs.etiqueta_qa) || '' }}"
+run-name: "liberar ${{ inputs.entrega }}"
 
 on:
   workflow_dispatch:
     inputs:
-      ambiente:
-        description: Ambiente de la etiqueta
-        type: choice
-        options: [qa, prd]
-        required: true
       entrega:
         description: Entrega (carpeta releases/<entrega>)
         type: string
         default: B1
         required: true
-      etiqueta_qa:
-        description: Solo PRD - etiqueta rel-QA-... desplegada con éxito en QA
-        type: string
-        required: false
       alcance:
         description: Alcance de la entrega (va en el mensaje de la etiqueta)
         type: string
@@ -29,16 +19,13 @@ on:
 
 permissions:
   contents: read
-  deployments: read
 
 concurrency:
   group: liberar-entrega
   cancel-in-progress: false
 
 env:
-  AMB: ${{ inputs.ambiente }}
   ENTREGA: ${{ inputs.entrega }}
-  ETQ_QA: ${{ inputs.etiqueta_qa }}
 
 jobs:
   verificar:
@@ -54,8 +41,6 @@ jobs:
           exit 1
 
       - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
 
       - uses: actions/setup-python@v7
         with:
@@ -68,29 +53,10 @@ jobs:
 
       - name: Commit a liberar
         id: commit
-        run: |
-          if [ "$AMB" = "qa" ]; then
-            sha=$(git rev-parse HEAD)
-          else
-            if [[ ! "$ETQ_QA" =~ ^rel-QA-${ENTREGA}-[0-9]{8}(-[0-9]+)?$ ]]; then
-              echo "::error title=Promoción::Para PRD indicar la etiqueta rel-QA-${ENTREGA}-AAAAMMDD[-N] desplegada en QA"
-              exit 1
-            fi
-            sha=$(git rev-parse "${ETQ_QA}^{commit}")
-          fi
-          echo "sha=${sha}" >> "$GITHUB_OUTPUT"
-          echo "Commit a liberar: ${sha}"
-
-      - name: Promoción - el commit se desplegó completo en QA
-        if: inputs.ambiente == 'prd'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: tools/ci/verificar-qa.sh "${{ steps.commit.outputs.sha }}"
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Compuerta sobre el commit
-        run: |
-          git checkout -q "${{ steps.commit.outputs.sha }}"
-          python tools/pases/pases.py validar --manifiesto "releases/${ENTREGA}/manifest.yaml"
+        run: python tools/pases/pases.py validar --manifiesto "releases/${ENTREGA}/manifest.yaml"
 
   liberar:
     name: Liberar
@@ -107,6 +73,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          ref: ${{ needs.verificar.outputs.sha }}
 
       - uses: actions/setup-python@v7
         with:
@@ -117,21 +84,17 @@ jobs:
       - name: Dependencias
         run: pip install -r tools/pases/requirements.txt
 
-      - name: Compuerta para el mensaje de la etiqueta
-        run: |
-          git checkout -q "$SHA"
-          python tools/pases/pases.py validar --manifiesto "releases/${ENTREGA}/manifest.yaml" > "$RUNNER_TEMP/compuerta.md"
-
       - name: Crear y publicar la etiqueta anotada
         run: |
-          etq=$(python tools/pases/pases.py siguiente-etiqueta --ambiente "$AMB" --entrega "$ENTREGA")
+          python tools/pases/pases.py validar --manifiesto "releases/${ENTREGA}/manifest.yaml" > "$RUNNER_TEMP/compuerta.md"
+          etq=$(python tools/pases/pases.py siguiente-etiqueta --ambiente qa --entrega "$ENTREGA")
           {
-            echo "Entrega ${ENTREGA} para ${AMB^^}"
+            echo "Entrega ${ENTREGA}"
             echo
             echo "Liberada por: ${ACTOR}"
             echo "Commit: ${SHA}"
-            if [ "$AMB" = "prd" ]; then echo "Promovida desde: ${ETQ_QA} (desplegada con éxito en QA)"; fi
             if [ -n "$ALCANCE" ]; then echo "Alcance: ${ALCANCE}"; fi
+            echo "Se instala en QA y, una vez completa en QA, esta misma etiqueta se instala en PRD."
             echo
             cat "$RUNNER_TEMP/compuerta.md"
           } > "$RUNNER_TEMP/mensaje.txt"

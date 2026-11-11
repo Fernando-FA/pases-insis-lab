@@ -18,8 +18,11 @@ lanzar() {
 estado() {
   gh run view "$1" -R "$R" --json status,conclusion,url,displayTitle,jobs \
     --jq '"\(.displayTitle) · \(.status) \(.conclusion // "") · \(.url)", (.jobs[] | "   \(.name): \(.status) \(.conclusion // "")")'
-  gh api "repos/$R/check-runs/$(gh run view "$1" -R "$R" --json jobs --jq '[.jobs[] | select(.conclusion=="failure")][0].databaseId // empty')/annotations" \
-    --jq '.[] | select(.annotation_level=="failure") | "   ✗ \(.message)"' 2>/dev/null | grep -v "Process completed with exit code" || true
+  local job; job=$(gh run view "$1" -R "$R" --json jobs --jq '[.jobs[] | select(.conclusion=="failure")][0].databaseId // empty')
+  if [ -n "$job" ]; then
+    gh api "repos/$R/check-runs/$job/annotations" --jq '.[] | select(.annotation_level=="failure") | "   ✗ \(.message)"' 2>/dev/null \
+      | grep -v "Process completed with exit code" || true
+  fi
 }
 
 # esperar <run> -> espera a que termine (incluye el tiempo de aprobación) y muestra el estado
