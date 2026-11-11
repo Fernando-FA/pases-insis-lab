@@ -1,7 +1,9 @@
 # Fija la versión de una entrega (Anexo B de la guía): etiqueta anotada rel-<AMB>-<ENTREGA>-<AAAAMMDD>[-N].
 #   qa : sobre el HEAD de Desa, solo si la compuerta pasa.
 #   prd: sobre el MISMO commit de una etiqueta rel-QA-* que ya se desplegó completa en QA.
+# Las verificaciones corren ANTES de pedir la aprobación del environment `liberacion`.
 name: Liberar entrega
+run-name: "liberar ${{ inputs.ambiente }} · ${{ inputs.entrega }}${{ inputs.etiqueta_qa && format(' desde {0}', inputs.etiqueta_qa) || '' }}"
 
 on:
   workflow_dispatch:
@@ -26,24 +28,24 @@ on:
         required: false
 
 permissions:
-  contents: write
+  contents: read
   deployments: read
 
 concurrency:
   group: liberar-entrega
   cancel-in-progress: false
 
+env:
+  AMB: ${{ inputs.ambiente }}
+  ENTREGA: ${{ inputs.entrega }}
+  ETQ_QA: ${{ inputs.etiqueta_qa }}
+
 jobs:
-  liberar:
-    name: Liberar
+  verificar:
+    name: Verificar entrega
     runs-on: ubuntu-latest
-    environment: liberacion
-    env:
-      AMB: ${{ inputs.ambiente }}
-      ENTREGA: ${{ inputs.entrega }}
-      ETQ_QA: ${{ inputs.etiqueta_qa }}
-      ALCANCE: ${{ inputs.alcance }}
-      ACTOR: ${{ github.actor }}
+    outputs:
+      sha: ${{ steps.commit.outputs.sha }}
     steps:
       - name: Solo desde Desa
         if: github.ref != 'refs/heads/Desa'
@@ -71,7 +73,7 @@ jobs:
             sha=$(git rev-parse HEAD)
           else
             if [[ ! "$ETQ_QA" =~ ^rel-QA-${ENTREGA}-[0-9]{8}(-[0-9]+)?$ ]]; then
-              echo "::error::Para PRD indicar la etiqueta rel-QA-${ENTREGA}-AAAAMMDD[-N] desplegada en QA"
+              echo "::error title=Promoción::Para PRD indicar la etiqueta rel-QA-${ENTREGA}-AAAAMMDD[-N] desplegada en QA"
               exit 1
             fi
             sha=$(git rev-parse "${ETQ_QA}^{commit}")
@@ -86,15 +88,41 @@ jobs:
         run: tools/ci/verificar-qa.sh "${{ steps.commit.outputs.sha }}"
 
       - name: Compuerta sobre el commit
-        env:
-          SHA: ${{ steps.commit.outputs.sha }}
+        run: |
+          git checkout -q "${{ steps.commit.outputs.sha }}"
+          python tools/pases/pases.py validar --manifiesto "releases/${ENTREGA}/manifest.yaml"
+
+  liberar:
+    name: Liberar
+    needs: verificar
+    runs-on: ubuntu-latest
+    environment: liberacion
+    permissions:
+      contents: write
+    env:
+      SHA: ${{ needs.verificar.outputs.sha }}
+      ALCANCE: ${{ inputs.alcance }}
+      ACTOR: ${{ github.actor }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: tools/pases/requirements.txt
+
+      - name: Dependencias
+        run: pip install -r tools/pases/requirements.txt
+
+      - name: Compuerta para el mensaje de la etiqueta
         run: |
           git checkout -q "$SHA"
-          python tools/pases/pases.py validar --manifiesto "releases/${ENTREGA}/manifest.yaml" | tee "$RUNNER_TEMP/compuerta.md"
+          python tools/pases/pases.py validar --manifiesto "releases/${ENTREGA}/manifest.yaml" > "$RUNNER_TEMP/compuerta.md"
 
       - name: Crear y publicar la etiqueta anotada
-        env:
-          SHA: ${{ steps.commit.outputs.sha }}
         run: |
           etq=$(python tools/pases/pases.py siguiente-etiqueta --ambiente "$AMB" --entrega "$ENTREGA")
           {
