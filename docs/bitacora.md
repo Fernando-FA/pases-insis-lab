@@ -50,4 +50,4 @@ Decisiones y diferencias con la guía v1.7:
 Pendiente:
 - `CHECK TILDES` posterior a cada pase (hoy el mojibake se detecta solo en la compuerta, sobre el repo).
 - Prevuelo de `ALLOCATE_ID` no contempla tablas que registra un pase anterior de la misma entrega.
-- Protección de `Desa` (se configura al terminar esta fase).
+- (hecho) Protección de `Desa`: PR obligatorio, check *Compuerta* obligatorio y actualizado con Desa, sin revisión obligatoria, también para administradores, sin force push ni borrado.
