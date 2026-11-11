@@ -1,0 +1,38 @@
+SQL> @foto.sql
+---- Objetos invalidos
+
+
+0 rows selected. 
+
+---- Datos
+
+PRODUCT_CODE    PRODUCT_VERSION    NAME                                    RENEWAL_DAYS 
+_______________ __________________ ____________________________________ _______________ 
+1101            1.00               Auxilio Médico - Salud Individual                 30 
+1201            1.00               Oncológico Tradicional                               
+
+2 rows selected. 
+
+
+   RULE_ID RULE_CODE              RULE_TYPE     
+__________ ______________________ _____________ 
+      1000 KW_COPAGO_AM           KEYWORD       
+      1001 KW_VALIDA_COPAGO_AM    VALIDATION    
+
+2 rows selected. 
+
+
+   VALIDATION_ID VALIDATION_CODE    RULE_CODE              
+________________ __________________ ______________________ 
+            7001 VAL_COPAGO_AM      KW_VALIDA_COPAGO_AM    
+
+1 row selected. 
+
+
+TABLE_NAME            LAST_ID 
+__________________ __________ 
+CFG_RULES                5000 
+PPX_VALIDATIONS          7001 
+
+2 rows selected. 
+

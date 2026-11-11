@@ -1,0 +1,13 @@
+===== INICIO PASE 0002-10002 =====
+
+PL/SQL procedure successfully completed.
+
+Actualizando Tabla Insis_Demo_Cfg.Cfg_Rules
+Rule [KW_COPAGO_AM]
+
+1 row merged.
+
+
+Commit complete.
+
+===== FIN PASE 0002-10002 =====
