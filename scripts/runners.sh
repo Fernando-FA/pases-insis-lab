@@ -2,6 +2,11 @@
 # Runners propios del laboratorio (WSL): ~/actions-runner-qa (insis-db,qa) y ~/actions-runner-prd (insis-db,prd).
 # Uso: scripts/runners.sh iniciar | detener | estado
 set -uo pipefail
+# Con run.sh el job hereda el entorno de este proceso (el archivo .path solo lo usa el servicio):
+# se fija aquí el PATH con Java 17 y SQLcl, sin rutas de Windows.
+export JAVA_HOME="$HOME/.local/opt/jdk-17.0.21+9"
+export PATH="$JAVA_HOME/bin:$HOME/.local/opt/sqlcl/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C.UTF-8
 accion="${1:-estado}"
 for amb in qa prd; do
   dir="$HOME/actions-runner-$amb"
