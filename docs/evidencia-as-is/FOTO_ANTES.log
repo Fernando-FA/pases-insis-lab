@@ -1,0 +1,31 @@
+SQL> @foto.sql
+---- Objetos invalidos
+
+
+0 rows selected. 
+
+---- Datos
+
+PRODUCT_CODE    PRODUCT_VERSION    NAME                         RENEWAL_DAYS 
+_______________ __________________ _________________________ _______________ 
+1101            1.00               Auxilio Médico                            
+1201            1.00               Oncológico Tradicional                    
+
+2 rows selected. 
+
+
+
+0 rows selected. 
+
+
+
+0 rows selected. 
+
+
+TABLE_NAME            LAST_ID 
+__________________ __________ 
+CFG_RULES                5000 
+PPX_VALIDATIONS          7000 
+
+2 rows selected. 
+

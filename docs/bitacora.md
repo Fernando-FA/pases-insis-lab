@@ -68,3 +68,15 @@ Observaciones:
 - `CONNECT` por entrada estándar funciona con SQLcl (`sql -S /nolog`): la clave no queda en argv ni en el log.
 - En shells no interactivos `~/.bashrc` no carga el PATH de SQLcl/Java: el runner necesitará el PATH en su
   propio archivo `.path` / `.env` (Fase 5).
+
+## Fase 3 — Proceso manual AS-IS (11-11-2026)
+
+Hecho:
+- Etiqueta manual `rel-QA-B1-20261111` → `b2894e5` y ejecución en QA siguiendo la guía v1.7, sin `pases.py`,
+  en una copia aparte del repositorio. 4 de 4 OK, 0 inválidos nuevos. Detalle en `docs/as-is-manual.md`.
+- Confirmado contra Oracle real: con el formato de la guía, `WHENEVER SQLERROR EXIT` confirma lo pendiente
+  al salir; con `ROLLBACK`, no. El código de salida se trunca a 8 bits (ORA-00904 → 136).
+- `PASE_CONTROL` quedó vacía tras la ejecución manual: la brecha de registro que motiva la automatización.
+
+Pendiente:
+- Recrear la base de QA (`docker compose down -v` del servicio) antes de la Fase 5. Requiere confirmación.
