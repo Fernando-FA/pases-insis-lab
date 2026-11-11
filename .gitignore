@@ -1,0 +1,10 @@
+# Carpeta local del implementador (no se versiona, igual que en Pacífico)
+DB/Releases/
+# Evidencia local y entornos
+evidencia/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.log
+.env
