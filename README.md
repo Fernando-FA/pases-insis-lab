@@ -41,3 +41,10 @@ python3 -m venv .venv && .venv/bin/pip install -r tools/pases/requirements.txt
 Nunca se ejecuta con `SYS` ni `SYSTEM`.
 
 Bitácora del laboratorio: [`docs/bitacora.md`](docs/bitacora.md).
+
+## Bases del laboratorio
+
+```bash
+cp .env.example .env      # completar las claves
+docker compose up -d      # oracle-qa :1521 y oracle-prd :1522 (FREEPDB1)
+```

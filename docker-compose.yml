@@ -1,0 +1,43 @@
+# Bases del laboratorio: QA (1521) y PRD (1522), Oracle Database Free.
+# Se inicializan solas la primera vez con db/setup/ (esquemas demo, INSIS_DEPLOY, PASE_CONTROL).
+# Claves en .env (no versionado). Ver .env.example.
+name: pases-insis-lab
+
+x-oracle: &oracle
+  image: gvenzl/oracle-free:23.26.3-slim-faststart
+  restart: unless-stopped
+  healthcheck:
+    test: ["CMD", "healthcheck.sh"]
+    interval: 15s
+    timeout: 10s
+    retries: 40
+    start_period: 60s
+
+services:
+  oracle-qa:
+    <<: *oracle
+    container_name: oracle-qa
+    ports:
+      - "1521:1521"
+    environment:
+      ORACLE_PASSWORD: ${ORACLE_PASSWORD_QA:?definir en .env}
+      INSIS_DEPLOY_PASSWORD: ${INSIS_DEPLOY_PASSWORD_QA:?definir en .env}
+    volumes:
+      - ./db/setup:/container-entrypoint-initdb.d:ro
+      - oracle-qa-data:/opt/oracle/oradata
+
+  oracle-prd:
+    <<: *oracle
+    container_name: oracle-prd
+    ports:
+      - "1522:1521"
+    environment:
+      ORACLE_PASSWORD: ${ORACLE_PASSWORD_PRD:?definir en .env}
+      INSIS_DEPLOY_PASSWORD: ${INSIS_DEPLOY_PASSWORD_PRD:?definir en .env}
+    volumes:
+      - ./db/setup:/container-entrypoint-initdb.d:ro
+      - oracle-prd-data:/opt/oracle/oradata
+
+volumes:
+  oracle-qa-data:
+  oracle-prd-data:

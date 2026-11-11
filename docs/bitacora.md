@@ -51,3 +51,20 @@ Pendiente:
 - `CHECK TILDES` posterior a cada pase (hoy el mojibake se detecta solo en la compuerta, sobre el repo).
 - Prevuelo de `ALLOCATE_ID` no contempla tablas que registra un pase anterior de la misma entrega.
 - (hecho) Protección de `Desa`: PR obligatorio, check *Compuerta* obligatorio y actualizado con Desa, sin revisión obligatoria, también para administradores, sin force push ni borrado.
+
+## Fase 2 — Bases de datos QA y PRD (11-11-2026)
+
+Hecho:
+- `docker-compose.yml` con `oracle-qa` (puerto 1521) y `oracle-prd` (1522), imagen fijada
+  `gvenzl/oracle-free:23.26.3-slim-faststart`, PDB `FREEPDB1`, volúmenes con nombre y healthcheck.
+- Se inicializan solas con `db/setup/` (00 usuario `INSIS_DEPLOY`, 01 esquemas demo y permisos, 02 `PASE_CONTROL` y
+  `PASE_ESTADO`). Sin errores en los logs de inicialización de ninguno de los dos.
+- Claves en `.env` (no versionado, permisos 600), una por ambiente; `.env.example` como plantilla.
+- Aceptación: con `INSIS_DEPLOY` conectan SQLcl y python-oracledb (modo thin) a las dos bases;
+  `SELECT * FROM INSIS_DEPLOY.PASE_ESTADO` responde `0 rows selected`. `INSIS_DEPLOY` ve las 5 tablas demo,
+  `DBA_OBJECTS` (inválidos: ninguno) y el catálogo `RB_ID_CONTROL`.
+
+Observaciones:
+- `CONNECT` por entrada estándar funciona con SQLcl (`sql -S /nolog`): la clave no queda en argv ni en el log.
+- En shells no interactivos `~/.bashrc` no carga el PATH de SQLcl/Java: el runner necesitará el PATH en su
+  propio archivo `.path` / `.env` (Fase 5).
