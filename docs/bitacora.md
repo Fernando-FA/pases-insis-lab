@@ -79,4 +79,38 @@ Hecho:
 - `PASE_CONTROL` quedó vacía tras la ejecución manual: la brecha de registro que motiva la automatización.
 
 Pendiente:
-- Recrear la base de QA (`docker compose down -v` del servicio) antes de la Fase 5. Requiere confirmación.
+- (hecho) Base de QA recreada limpia al terminar la fase.
+
+## Fase 4 — Herramienta contra Oracle real (11-11-2026)
+
+Hecho (desde la terminal, contra `oracle-qa`, sin GitHub):
+- `plan` y `ejecutar` de la etiqueta `rel-QA-B1-20261111`: 4 de 4 OK, `PASE_ESTADO` con los 4 `APLICADO`,
+  evidencia completa (logs, scripts, hoja, ESTADO, VERIFICAR, inválidos antes/después). La clave no aparece en ningún archivo.
+- Reejecución sin pendientes; `revertir 0002` rechazado (0004 depende); `revertir 0002 0004` en orden inverso;
+  volver a aplicar lo revertido (intento 2). `paquete` genera scripts, LEEME, hoja e Inventario .xlsx.
+- Escenarios con commits y etiquetas locales (no publicados) sobre la base real:
+
+| Caso | Resultado contra Oracle real |
+| --- | --- |
+| 0046 · columna inexistente a mitad de pase | ERROR `L14: SQL Error: ORA-00904…`; el UPDATE previo se deshizo (SQLcl imprime `Rollback`) |
+| 0046 · misma etiqueta otra vez | Bloqueado: "se reanuda con la etiqueta nueva" |
+| 0046 · corrección + etiqueta nueva | Retoma en ese pase, intento 2, sin repetir los aplicados |
+| 0045 · COMMIT y luego ORA-20075 en PL/SQL | PARCIAL; log idéntico al real (`DECLARE * ERROR at line 1: ORA-20075`) |
+| 0045 · pase BASE antes en la secuencia + etiqueta nueva | BASE OK y el pase retoma (intento 2) OK |
+| 0031/0068/0069 · filtro `'1'` con `'1.00'` en la base | ALERTA "pase sin efecto: 1 sentencia DML y 0 filas" |
+| 0065 · línea en blanco en q-literal | La compuerta lo rechaza (C07, línea exacta); ejecutado igual, SQLcl da el mismo ORA-01756 del Bloque 2 |
+| Prerrequisito del manifiesto no cumplido | ERROR sin generar ni ejecutar el script |
+| Commit distinto al indicado | Se niega a ejecutar |
+| Pase aplicado cuyo contenido cambió | Se detiene: "requiere decisión de CTI" |
+| Tabla fuera de `RB_ID_CONTROL` | El prevuelo da FALTA y no arranca |
+| Usuario SYS | Se niega a ejecutar |
+
+- Pruebas de integración `pytest -m oracle` (`tests/test_oracle.py`, 6): conexión thin, vistas de control y la
+  lectura de la salida real de SQLcl (OK sin efecto, ORA-00904 con código 136, ORA-20075 en PL/SQL, ORA-01756).
+  No escriben datos y se saltan si no hay `PASES_TEST_DSN`/`PASES_TEST_PASSWORD` (como en la Compuerta).
+
+Hallazgos:
+- No hizo falta corregir `pases.py`: la detección escrita para la salida de SQLcl de los logs reales del Bloque 2
+  coincide con la salida de SQLcl 26.3.
+- SQLcl escribe `Picked up JAVA_TOOL_OPTIONS` en la consola por `-Dfile.encoding=UTF-8`; queda en la salida de
+  consola (02_CONTROLES), no en el log del pase.
