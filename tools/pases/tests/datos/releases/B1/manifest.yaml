@@ -1,0 +1,68 @@
+# Manifiesto de la entrega B1. Reemplaza al Excel "Inventario Sprints Scripts" (hoja Inventario Final):
+# mismas columnas, pero versionado y validado en cada PR. El .xlsx se genera con `pases.py inventario`.
+#
+# Reglas (las mismas de la guía de Pacífico):
+# - El orden es SECUENCIA y nada más. Solo se ejecutan filas con estado_task Done y con secuencia.
+# - Cada pase tiene una sola SECUENCIA y se ejecuta una sola vez, aunque cubra varias US.
+# - Un pase renumerado declara su número anterior en `renumerado_de`: si ya se aplicó así, no se repite.
+entrega: B1
+descripcion: Bloque 1 del laboratorio - producto 1101 (Auxilio Médico)
+inventario: v1.0
+
+# Pases de bloques anteriores que ya están aplicados en todos los ambientes (Bloque 1 de Pacífico).
+previos: []
+
+# Generadores de IDs y el catálogo que lee cada uno (Anexo D de la guía).
+generadores_id:
+  - paquete: INSIS_DEMO_CFG.IDCONTROL
+    catalogo: INSIS_DEMO_CFG.RB_ID_CONTROL
+    columna: TABLE_NAME
+
+pases:
+  - secuencia: 1
+    pase: 0001-10001
+    sprint: 1
+    us: [10001]
+    task: 20001
+    descripcion: AM · Datos generales del producto 1101
+    estado_task: Done
+    reinicio_insis_gen: false
+    depende_de: []
+    prerrequisitos: []
+
+  - secuencia: 2
+    pase: 0002-10002
+    sprint: 1
+    us: [10002]
+    task: 20002
+    descripcion: AM · Reglas de póliza copago
+    estado_task: Done
+    reinicio_insis_gen: false
+    depende_de: [0001-10001]
+    prerrequisitos:
+      - descripcion: Riesgo base HEALTH en CPR_RISKS
+        sql: SELECT COUNT(*) FROM INSIS_DEMO_CFG.CPR_RISKS WHERE RISK_CODE = 'HEALTH'
+        minimo: 1
+
+  - secuencia: 3
+    pase: 0003-10003
+    sprint: 2
+    us: [10003, 10005]
+    task: 20003
+    descripcion: AM · Parámetros de renovación
+    estado_task: Done
+    reinicio_insis_gen: true
+    depende_de: [0001-10001]
+    prerrequisitos: []
+    nota: Cubre las US 10003 y 10005. Sin script de reversión.
+
+  - secuencia: 4
+    pase: 0004-10004
+    sprint: 2
+    us: [10004]
+    task: 20004
+    descripcion: AM · Validaciones PPX de copago (dos esquemas)
+    estado_task: Done
+    reinicio_insis_gen: true
+    depende_de: [0002-10002]
+    prerrequisitos: []
