@@ -16,14 +16,14 @@ releases/<entrega>/manifest.yaml         reemplaza al Inventario Excel (mismas c
 tools/pases/pases.py                     la herramienta (validar · plan · ejecutar · revertir · paquete · inventario)
 tools/pases/tests/                       pruebas con SQLcl simulado
 db/setup/                                esquemas demo, usuario INSIS_DEPLOY y PASE_CONTROL
-.github/workflows/                       pr-validacion · liberar · desplegar
+.github/workflows/                       pr-validacion · liberar · desplegar · revertir · paquete
 ```
 
 ## Flujo
 
 ```
 PR a Desa ──► Compuerta (pr-validacion.yml) ──► merge
-Liberar ──► rel-QA-B1-AAAAMMDD[-N] ──► Desplegar qa  ──► aprobación ──► runner QA  ──► BD QA
+Liberar ──► rel-QA-B1-AAAAMMDD[-N] ──► Desplegar qa (se lanza solo) ──► aprobación ──► runner QA ──► BD QA
                      │ (la MISMA etiqueta, solo si quedó completa en QA)
                      └──────────────► Desplegar prd (número de cambio) ──► aprobación ──► runner PRD ──► BD PRD
 ```

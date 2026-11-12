@@ -163,3 +163,18 @@ El hito "se instaló en PRD" queda en el despliegue de GitHub (aprobador, fecha,
 - `liberar.yml` solo libera para QA. `desplegar.yml` y `pases.py` aceptan solo `rel-QA-*`; los environments
   `prd` y `prd-rollback` restringen a `rel-QA-*`.
 - Pendiente confirmar con Pacífico cómo se hace hoy el pase a PRD (la guía v1.7 solo describe QA).
+
+## Fase 6 — Ajustes del flujo tras E1–E4 y E13 (11-11-2026)
+
+- **Sin cambios no hay etiqueta nueva:** `liberar.yml` falla en "Verificar entrega" si el HEAD de `Desa` ya tiene
+  una etiqueta de la entrega (pasó con `-4`, `-5` y `-6`, las tres sobre `3767800`).
+- **Liberar lanza QA:** al publicar la etiqueta, `liberar.yml` lanza `desplegar.yml` en QA, que queda esperando la
+  aprobación de `qa`. PRD sigue lanzándose a mano porque requiere el número de cambio.
+- **Resumen para quien aprueba** (`pases.py resumen`, en el job previo a la aprobación): pases de la etiqueta,
+  reinicio, rollback y si son nuevos, modificados o sin cambios respecto de la etiqueta anterior; en PRD, el
+  despliegue de QA que validó el commit (con enlace) y el número de cambio. El plan contra la base (qué ya está
+  aplicado) sigue viéndose recién en el log; mostrarlo antes de aprobar requiere leer `PASE_CONTROL` con un
+  usuario de solo lectura (pendiente para la revisión del modelo de aprobaciones).
+- **Workflows separados:** `desplegar.yml` (ambiente, número de cambio, reintentar), `revertir.yml` (environment
+  `<amb>-rollback`, pases obligatorios) y `paquete.yml` (sin environment ni base). Comparten el grupo de concurrencia
+  `pases-bd-<amb>`, así que una reversión y un despliegue al mismo ambiente no corren a la vez.

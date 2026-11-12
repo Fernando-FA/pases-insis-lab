@@ -1340,6 +1340,47 @@ def cmd_siguiente_etiqueta(args) -> int:
     return 0
 
 
+def resumen_entrega(raiz: Path, m: Manifiesto, etiqueta: str, ambiente: str, anterior: str | None) -> str:
+    """Lo que se va a instalar, para quien aprueba: pases de la etiqueta y qué cambió respecto de la anterior."""
+    raiz = raiz.resolve()
+    cambiados: set[Path] = set()
+    existian: set[str] = set()
+    if anterior:
+        cambiados = {(raiz / l).resolve() for l in git(raiz, "diff", "--name-only", f"{anterior}^{{commit}}", "HEAD").splitlines() if l}
+        existian = set(git(raiz, "ls-tree", "-d", "--name-only", f"{anterior}^{{commit}}", "DB/Deployments/").splitlines())
+    commit = git(raiz, "rev-parse", "--short", "HEAD")
+    lineas = [f"## Qué se instala · {etiqueta} → {ambiente.upper()}", "",
+              f"Entrega **{m.entrega}** · commit `{commit}` · "
+              + (f"comparada con la etiqueta anterior `{anterior}`" if anterior else "primera etiqueta de la entrega"), "",
+              "| SEC | Pase | Descripción | Reinicio | Rollback | Respecto de la anterior |",
+              "| --- | --- | --- | --- | --- | --- |"]
+    for p in m.ejecutables():
+        pr = resolver_pase(raiz, p)
+        rel = str(pr.carpeta.relative_to(raiz)).replace("\\", "/")
+        if not anterior or rel not in existian:
+            cambio = "**nuevo**"
+        elif any(f in cambiados for f in pr.archivos):
+            cambio = "**modificado**"
+        else:
+            cambio = "sin cambios"
+        lineas.append(f"| {p.sec} | {p.pase} | {p.descripcion} | {'Sí' if p.reinicio else 'No'} | "
+                      f"{'Sí' if pr.rollback else 'No'} | {cambio} |")
+    fuera = [p.pase for p in m.pases if not p.ejecutable]
+    if fuera:
+        lineas += ["", f"No se ejecutan (sin SECUENCIA o no Done): {', '.join(fuera)}"]
+    lineas += ["", "Los pases que ya estén aplicados en el ambiente con el mismo contenido no se repiten; "
+                   "el plan exacto queda en el log de la ejecución."]
+    return "\n".join(lineas)
+
+
+def cmd_resumen(args) -> int:
+    texto = resumen_entrega(Path(args.raiz), manifiesto_o_error(Path(args.manifiesto)), args.etiqueta, args.ambiente,
+                            args.anterior)
+    print(texto)
+    resumen_github(texto)
+    return 0
+
+
 # =====================================================================================
 # CLI
 # =====================================================================================
@@ -1391,11 +1432,18 @@ def parser() -> argparse.ArgumentParser:
     s.add_argument("--ambiente", required=True, choices=["qa", "prd"])
     s.add_argument("--entrega", required=True)
     s.add_argument("--fecha", help="AAAAMMDD (por defecto, hoy en Lima)")
+
+    z = sub.add_parser("resumen", help="qué se instala con una etiqueta (para quien aprueba)")
+    z.add_argument("--manifiesto", required=True)
+    z.add_argument("--ambiente", required=True, choices=["qa", "prd"])
+    z.add_argument("--etiqueta", required=True)
+    z.add_argument("--anterior", help="etiqueta anterior de la entrega, para marcar pases nuevos o modificados")
     return ap
 
 
 COMANDOS = {"validar": cmd_validar, "ejecutar": cmd_ejecutar, "revertir": cmd_revertir, "plan": cmd_plan,
-            "paquete": cmd_paquete, "inventario": cmd_inventario, "siguiente-etiqueta": cmd_siguiente_etiqueta}
+            "paquete": cmd_paquete, "inventario": cmd_inventario, "siguiente-etiqueta": cmd_siguiente_etiqueta,
+            "resumen": cmd_resumen}
 
 
 def main(argv: list[str] | None = None) -> int:

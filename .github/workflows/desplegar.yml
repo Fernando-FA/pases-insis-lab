@@ -1,7 +1,9 @@
-# Ejecuta una etiqueta en un ambiente (secciones 4 a 8 de la guía), la revierte o arma el paquete manual.
+# Instala una etiqueta en un ambiente (secciones 4 a 8 de la guía).
 # Se lanza SIEMPRE sobre una etiqueta rel-QA-*. PRD instala la MISMA etiqueta que ya se desplegó completa en QA.
+# QA se lanza solo al terminar `liberar.yml`; PRD se lanza a mano con el número de cambio.
+# Revertir y armar el paquete manual están en revertir.yml y paquete.yml.
 name: Desplegar pases
-run-name: "${{ inputs.accion }} ${{ inputs.ambiente }} · ${{ github.ref_name }}"
+run-name: "desplegar ${{ inputs.ambiente }} · ${{ github.ref_name }}"
 
 on:
   workflow_dispatch:
@@ -11,22 +13,12 @@ on:
         type: choice
         options: [qa, prd]
         required: true
-      accion:
-        description: Acción
-        type: choice
-        options: [ejecutar, revertir, paquete]
-        default: ejecutar
-        required: true
       numero_cambio:
         description: Número de cambio ITSM (obligatorio en PRD)
         type: string
         required: false
-      pases_revertir:
-        description: Solo revertir - pases separados por espacio (ej. 0004-10004 0002-10002)
-        type: string
-        required: false
       reintentar:
-        description: Pases a reintentar con la misma etiqueta (solo por decisión de CTI)
+        description: Excepcional - pases que fallaron con esta misma etiqueta y CTI autoriza reintentar sin corrección
         type: string
         required: false
 
@@ -41,13 +33,11 @@ jobs:
     outputs:
       entrega: ${{ steps.etiqueta.outputs.entrega }}
     env:
-      AMB: ${{ inputs.ambiente }}
       REF_TYPE: ${{ github.ref_type }}
       REF_NAME: ${{ github.ref_name }}
       NUMERO_CAMBIO: ${{ inputs.numero_cambio }}
-      PASES_REVERTIR: ${{ inputs.pases_revertir }}
     steps:
-      - name: Se ejecuta una etiqueta del ambiente, nunca una rama
+      - name: Se ejecuta una etiqueta liberada, nunca una rama
         id: etiqueta
         run: |
           if [ "$REF_TYPE" != "tag" ]; then
@@ -61,59 +51,41 @@ jobs:
           echo "entrega=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
 
       - name: Número de cambio (PRD)
-        if: inputs.ambiente == 'prd' && inputs.accion != 'paquete'
+        if: inputs.ambiente == 'prd'
         run: |
           if [ -z "${NUMERO_CAMBIO// /}" ]; then
             echo "::error title=Número de cambio::PRD exige número de cambio ITSM"
             exit 1
           fi
 
-      - name: Pases a revertir
-        if: inputs.accion == 'revertir'
-        run: |
-          if [ -z "${PASES_REVERTIR// /}" ]; then
-            echo "::error::Indicar los pases a revertir"
-            exit 1
-          fi
-
       - uses: actions/checkout@v7
-        if: inputs.ambiente == 'prd' && inputs.accion == 'ejecutar'
         with:
-          sparse-checkout: tools/ci
+          fetch-depth: 0
 
       - name: Promoción - el commit se desplegó completo en QA
-        if: inputs.ambiente == 'prd' && inputs.accion == 'ejecutar'
+        if: inputs.ambiente == 'prd'
         env:
           GH_TOKEN: ${{ github.token }}
         run: tools/ci/verificar-qa.sh "$GITHUB_SHA"
 
-  paquete:
-    name: Paquete manual
-    if: inputs.accion == 'paquete'
-    needs: verificar
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: tools/pases/requirements.txt
-      - run: pip install -r tools/pases/requirements.txt
-      - name: Armar paquete
+
+      - name: Qué se instala (resumen para quien aprueba)
         env:
-          ENTREGA: ${{ needs.verificar.outputs.entrega }}
-        run: >
-          python tools/pases/pases.py paquete --manifiesto "releases/${ENTREGA}/manifest.yaml"
-          --ambiente "${{ inputs.ambiente }}" --etiqueta "${{ github.ref_name }}" --salida "$RUNNER_TEMP/paquete"
-      - uses: actions/upload-artifact@v7
-        with:
-          name: paquete-${{ inputs.ambiente }}-${{ github.ref_name }}
-          path: ${{ runner.temp }}/paquete
+          ENTREGA: ${{ steps.etiqueta.outputs.entrega }}
+        run: |
+          pip install -q -r tools/pases/requirements.txt
+          anterior=$(git tag -l "rel-QA-${ENTREGA}-*" --sort=v:refname | grep -B1 -x "$REF_NAME" | grep -vx "$REF_NAME" || true)
+          python tools/pases/pases.py resumen --manifiesto "releases/${ENTREGA}/manifest.yaml" \
+            --ambiente "${{ inputs.ambiente }}" --etiqueta "$REF_NAME" ${anterior:+--anterior "$anterior"}
+          if [ -n "${NUMERO_CAMBIO// /}" ]; then echo -e "\nNúmero de cambio: **${NUMERO_CAMBIO}**" >> "$GITHUB_STEP_SUMMARY"; fi
 
   ejecutar:
     name: Ejecutar en ${{ inputs.ambiente }}
-    if: inputs.accion == 'ejecutar'
     needs: verificar
     environment: ${{ inputs.ambiente }}
     runs-on: [self-hosted, insis-db, "${{ inputs.ambiente }}"]
@@ -187,61 +159,6 @@ jobs:
           az storage blob upload-batch --auth-mode login --account-name "${{ vars.AZURE_STORAGE_ACCOUNT }}"
           --destination evidencia-pases --destination-path "${{ inputs.ambiente }}/${GITHUB_REF_NAME}/${GITHUB_RUN_ID}"
           --source "$RUNNER_TEMP/evidencia"
-
-      - name: Limpiar
-        if: always()
-        run: rm -rf "$RUNNER_TEMP/evidencia" DB/Releases
-
-  revertir:
-    name: Revertir en ${{ inputs.ambiente }}
-    if: inputs.accion == 'revertir'
-    needs: verificar
-    environment: ${{ inputs.ambiente }}-rollback
-    runs-on: [self-hosted, insis-db, "${{ inputs.ambiente }}"]
-    concurrency:
-      group: pases-bd-${{ inputs.ambiente }}
-      cancel-in-progress: false
-    env:
-      ENTREGA: ${{ needs.verificar.outputs.entrega }}
-      PASES_DB_USER: ${{ vars.PASES_DB_USER }}
-      PASES_DB_DSN: ${{ vars.PASES_DB_DSN }}
-      PASES_DB_PASSWORD: ${{ secrets.PASES_DB_PASSWORD }}
-      PASES_ESQUEMA_CONTROL: ${{ vars.PASES_ESQUEMA_CONTROL }}
-      PASES_CLIENTE: ${{ vars.PASES_CLIENTE || 'sql' }}
-      PASES_NUMERO_CAMBIO: ${{ inputs.numero_cambio }}
-      PASES_REVERTIR: ${{ inputs.pases_revertir }}
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-
-      - name: Etiqueta anotada local
-        run: git fetch --force origin "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
-
-      - name: Entorno Python
-        run: |
-          python3 -m venv .venv
-          .venv/bin/pip install -q -r tools/pases/requirements.txt
-
-      - name: Revertir pases
-        run: |
-          read -ra pases <<< "$PASES_REVERTIR"
-          .venv/bin/python tools/pases/pases.py revertir \
-            --manifiesto "releases/${ENTREGA}/manifest.yaml" \
-            --ambiente "${{ inputs.ambiente }}" \
-            --etiqueta "$GITHUB_REF_NAME" \
-            --commit "$GITHUB_SHA" \
-            --evidencia "$RUNNER_TEMP/evidencia" \
-            --pases "${pases[@]}"
-
-      - name: Publicar evidencia
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: evidencia-rollback-${{ inputs.ambiente }}-${{ github.ref_name }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/evidencia
-          if-no-files-found: warn
-          retention-days: 90
 
       - name: Limpiar
         if: always()

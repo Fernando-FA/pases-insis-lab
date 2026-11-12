@@ -1,0 +1,55 @@
+# Arma el paquete para ejecución manual de una etiqueta: scripts <SEC>_<pase>.sql con el formato de la guía,
+# LEEME, hoja de seguimiento e Inventario .xlsx. No toca ninguna base ni usa secretos: no requiere aprobación.
+name: Paquete manual
+run-name: "paquete ${{ inputs.ambiente }} · ${{ github.ref_name }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      ambiente:
+        description: Ambiente para el que se arman los scripts
+        type: choice
+        options: [qa, prd]
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  paquete:
+    name: Paquete manual
+    runs-on: ubuntu-latest
+    env:
+      REF_TYPE: ${{ github.ref_type }}
+      REF_NAME: ${{ github.ref_name }}
+    steps:
+      - name: Etiqueta liberada
+        id: etiqueta
+        run: |
+          if [ "$REF_TYPE" != "tag" ] || [[ ! "$REF_NAME" =~ ^rel-QA-([A-Z0-9]+)-[0-9]{8}(-[0-9]+)?$ ]]; then
+            echo "::error title=Etiqueta::El paquete se arma desde una etiqueta liberada rel-QA-* (se lanzó sobre ${REF_NAME})"
+            exit 1
+          fi
+          echo "entrega=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: tools/pases/requirements.txt
+
+      - run: pip install -r tools/pases/requirements.txt
+
+      - name: Armar paquete
+        env:
+          ENTREGA: ${{ steps.etiqueta.outputs.entrega }}
+        run: >
+          python tools/pases/pases.py paquete --manifiesto "releases/${ENTREGA}/manifest.yaml"
+          --ambiente "${{ inputs.ambiente }}" --etiqueta "$REF_NAME" --salida "$RUNNER_TEMP/paquete"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: paquete-${{ inputs.ambiente }}-${{ github.ref_name }}
+          path: ${{ runner.temp }}/paquete
