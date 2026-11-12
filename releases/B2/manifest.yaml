@@ -40,6 +40,18 @@ pases:
     prerrequisitos: []
 
   - secuencia: 3
+    pase: 0011-10016
+    sprint: 3
+    us: [10016]
+    task: 20016
+    descripcion: ONCO · Riesgo base del producto oncológico
+    estado_task: Done
+    reinicio_insis_gen: false
+    depende_de: []
+    prerrequisitos: []
+    nota: Agregado por CTI tras el prerrequisito no cumplido de 0007-10013 (E8).
+
+  - secuencia: 4
     pase: 0007-10013
     sprint: 3
     us: [10013]
@@ -47,13 +59,13 @@ pases:
     descripcion: ONCO · Cobertura oncológica
     estado_task: Done
     reinicio_insis_gen: false
-    depende_de: []
+    depende_de: [0011-10016]
     prerrequisitos:
       - descripcion: Riesgo ONCO del producto 1201 en CPR_RISKS
         sql: SELECT COUNT(*) FROM INSIS_DEMO_CFG.CPR_RISKS WHERE RISK_CODE = 'ONCO'
         minimo: 1
 
-  - secuencia: 4
+  - secuencia: 5
     pase: 0008-10014
     sprint: 4
     us: [10014]
@@ -65,7 +77,7 @@ pases:
     prerrequisitos: []
     nota: Sin script de reversión.
 
-  - secuencia: 5
+  - secuencia: 6
     pase: 0009-10015
     sprint: 4
     us: [10015]
@@ -76,7 +88,7 @@ pases:
     depende_de: [0007-10013]
     prerrequisitos: []
 
-  - secuencia: 6
+  - secuencia: 7
     pase: 0010-10004
     sprint: 4
     us: [10004]
