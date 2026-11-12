@@ -1,0 +1,4 @@
+/* Rollback pase 0007-10013 */
+PROMPT Revirtiendo Tabla Insis_Demo_Cfg.Cfg_Rules
+DELETE FROM INSIS_DEMO_CFG.CFG_RULES WHERE RULE_CODE = 'KW_COBERTURA_ONCO';
+COMMIT;

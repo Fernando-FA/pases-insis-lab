@@ -1,0 +1,90 @@
+# Manifiesto de la entrega B2 del laboratorio. Cada pase trae a propósito un defecto de los que se vieron en el
+# Bloque 2 de Pacífico; los ciclos de corrección están en docs/escenarios.md.
+#   0006-10012  error a mitad de la entrega: ORA-00904 (caso 0046)             -> E6 y E7
+#   0007-10013  prerrequisito no cumplido: falta el riesgo ONCO (caso 0045)    -> E8
+#   0008-10014  pase sin efecto: versión '1' en vez de '1.00'                  -> E14
+#   0009-10015  ALLOCATE_ID con una tabla fuera del catálogo                   -> E15
+#   0010-10004  pase renumerado: ya se aplicó como 0004-10004 en B1            -> E17
+entrega: B2
+descripcion: Bloque 2 del laboratorio - productos 1101 (Auxilio Médico) y 1201 (Oncológico Tradicional)
+inventario: v1.0
+
+previos: [0001-10001, 0002-10002, 0003-10003, 0004-10004]
+
+generadores_id:
+  - paquete: INSIS_DEMO_CFG.IDCONTROL
+    catalogo: INSIS_DEMO_CFG.RB_ID_CONTROL
+    columna: TABLE_NAME
+
+pases:
+  - secuencia: 1
+    pase: 0005-10011
+    sprint: 3
+    us: [10011]
+    task: 20011
+    descripcion: AM · Regla de deducible
+    estado_task: Done
+    reinicio_insis_gen: false
+    depende_de: [0001-10001]
+    prerrequisitos: []
+
+  - secuencia: 2
+    pase: 0006-10012
+    sprint: 3
+    us: [10012]
+    task: 20012
+    descripcion: AM · Regla de tope anual
+    estado_task: Done
+    reinicio_insis_gen: false
+    depende_de: [0001-10001]
+    prerrequisitos: []
+
+  - secuencia: 3
+    pase: 0007-10013
+    sprint: 3
+    us: [10013]
+    task: 20013
+    descripcion: ONCO · Cobertura oncológica
+    estado_task: Done
+    reinicio_insis_gen: false
+    depende_de: []
+    prerrequisitos:
+      - descripcion: Riesgo ONCO del producto 1201 en CPR_RISKS
+        sql: SELECT COUNT(*) FROM INSIS_DEMO_CFG.CPR_RISKS WHERE RISK_CODE = 'ONCO'
+        minimo: 1
+
+  - secuencia: 4
+    pase: 0008-10014
+    sprint: 4
+    us: [10014]
+    task: 20014
+    descripcion: ONCO · Días de renovación
+    estado_task: Done
+    reinicio_insis_gen: true
+    depende_de: []
+    prerrequisitos: []
+    nota: Sin script de reversión.
+
+  - secuencia: 5
+    pase: 0009-10015
+    sprint: 4
+    us: [10015]
+    task: 20015
+    descripcion: ONCO · Validación PPX de cobertura
+    estado_task: Done
+    reinicio_insis_gen: true
+    depende_de: [0007-10013]
+    prerrequisitos: []
+
+  - secuencia: 6
+    pase: 0010-10004
+    sprint: 4
+    us: [10004]
+    task: 20004
+    descripcion: AM · Validaciones PPX de copago (renumerado)
+    estado_task: Done
+    reinicio_insis_gen: true
+    depende_de: [0002-10002]
+    prerrequisitos: []
+    renumerado_de: 0004-10004
+    nota: En el Inventario de B1 figuraba como 0004-10004 y ya está aplicado con ese número.
