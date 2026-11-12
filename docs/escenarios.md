@@ -64,5 +64,7 @@ del Bloque 2. Cada ciclo es un PR de corrección, una liberación y un despliegu
 - **Un rechazo de dependencias ocurre después de aprobar.** La aprobación `qa-rollback` se da antes de que la
   herramienta mire la base, así que quien aprueba no sabe todavía si la reversión es válida. Lo mismo pasa con E10.
   Una mejora posible es que el job previo consulte `PASE_ESTADO` en solo lectura y rechace antes de pedir aprobación.
-- **Tras E11, QA y PRD quedan distintos a propósito**: 0007-10013 y 0009-10015 están `REVERTIDO` en QA y `APLICADO` en
-  PRD. Se reponen relanzando `-6` en QA.
+- **E11 dejó QA con menos que PRD, y eso no debe permitirse.** 0007-10013 y 0009-10015 quedaron `REVERTIDO` en QA y
+  `APLICADO` en PRD: el próximo cambio se habría probado en QA sobre una base distinta de la de PRD. Se repusieron
+  relanzando `-6` en QA, y `revertir.yml` ahora rechaza en QA, antes de pedir aprobación, todo pase que siga aplicado
+  en PRD (`tools/ci/verificar-prd.sh`, que lee `ESTADO_PRD.csv` de la última evidencia de PRD sin conectarse a PRD).
