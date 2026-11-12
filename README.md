@@ -40,7 +40,14 @@ python3 -m venv .venv && .venv/bin/pip install -r tools/pases/requirements.txt
 `ejecutar`, `revertir` y `plan` leen la conexión de `PASES_DB_USER`, `PASES_DB_PASSWORD` y `PASES_DB_DSN`.
 Nunca se ejecuta con `SYS` ni `SYSTEM`.
 
-Bitácora del laboratorio: [`docs/bitacora.md`](docs/bitacora.md).
+## Documentación
+
+| Documento | Contenido |
+| --- | --- |
+| [`docs/as-is-manual.md`](docs/as-is-manual.md) | El proceso manual de la guía, reproducido, y lo que se encontró |
+| [`docs/escenarios.md`](docs/escenarios.md) | Los 17 escenarios del Bloque 2 ejecutados en el pipeline, con enlaces a cada ejecución |
+| [`docs/diferencias-con-pacifico.md`](docs/diferencias-con-pacifico.md) | Qué no es igual a Pacífico, qué haría falta allá y qué falta confirmar |
+| [`docs/bitacora.md`](docs/bitacora.md) | Bitácora por fase y decisiones |
 
 ## Bases del laboratorio
 
