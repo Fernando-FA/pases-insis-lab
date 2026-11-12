@@ -21,7 +21,7 @@ están en [`scripts/escenarios/`](../scripts/escenarios/). Las aprobaciones de e
 | E2 | PRD con una etiqueta que no pasó por QA | Bloqueado en "Promoción" sin pedir aprobación | ✅ `rel-QA-B1-20261111-7` (commit nuevo `521ac4c`): su despliegue en QA se rechazó en la aprobación y PRD con `CHG-0002` se detuvo en "Promoción": "no tiene un despliegue exitoso en QA". Sin pedir aprobación ni tocar la base. (Un intento previo con `-5` no aplicaba: era el mismo commit que `-4`, ya completo en QA) | [liberación](https://github.com/Fernando-FA/pases-insis-lab/actions/runs/43132451463) · [QA rechazado](https://github.com/Fernando-FA/pases-insis-lab/actions/runs/43132564875) · [PRD](https://github.com/Fernando-FA/pases-insis-lab/actions/runs/43132687201) |
 | E3 | PRD sin número de cambio | Bloqueado | ✅ "PRD exige número de cambio ITSM", sin pedir aprobación | [run](https://github.com/Fernando-FA/pases-insis-lab/actions/runs/43119654285) |
 | E4 | Desplegar desde `Desa` (no etiqueta) | Bloqueado | ✅ "Se ejecuta una etiqueta, nunca una rama", sin pedir aprobación | [run](https://github.com/Fernando-FA/pases-insis-lab/actions/runs/43119704688) |
-| E5 | PR con líneas en blanco dentro de un `q'~...~'` (caso 0065) | La Compuerta falla; no se puede mergear | ⏳ | |
+| E5 | PR con líneas en blanco dentro de un `q'~...~'` (caso 0065) | La Compuerta falla; no se puede mergear | ✅ PR #10: "Compuerta sobre todos los manifiestos" rechaza con C07 (línea 8 del MERGE); el PR queda bloqueado | [PR #10](https://github.com/Fernando-FA/pases-insis-lab/pull/10) |
 | E6 | Error a mitad de la entrega (caso 0046) | Corta en ese pase, reporte de la guía, anteriores `APLICADO` | ⏳ | |
 | E7 | Corrección de E6 por PR, etiqueta nueva | Retoma en el pase que falló (intento 2) | ⏳ | |
 | E8 | Prerrequisito no cumplido (caso 0045) | Falla por prerrequisito sin ejecutar; variante parcial | ⏳ | |
@@ -32,8 +32,22 @@ están en [`scripts/escenarios/`](../scripts/escenarios/). Las aprobaciones de e
 | E13 | Paquete manual | Artefacto con scripts y LEEME, sin tocar la base | ✅ 4 scripts `<SEC>_<pase>.sql`, LEEME, hoja e Inventario .xlsx; sin aprobación ni base | [run](https://github.com/Fernando-FA/pases-insis-lab/actions/runs/43119753928) |
 | E14 | Pase sin efecto (`'1'` vs `'1.00'`) | `ALERTA` y se detiene | ⏳ (probado en local, Fase 4) | |
 | E15 | Tabla fuera del catálogo de `ALLOCATE_ID` | Prevuelo `FALTA`, no arranca | ⏳ (probado en local, Fase 4) | |
-| E16 | PR con mojibake (caso 0003) | La Compuerta falla | ⏳ | |
+| E16 | PR con mojibake (caso 0003) | La Compuerta falla | ✅ PR #11: rechazado con C08 ("texto doblemente codificado"); el PR queda bloqueado | [PR #11](https://github.com/Fernando-FA/pases-insis-lab/pull/11) |
 | E17 | Pase renumerado ya aplicado | No se reejecuta | ⏳ | |
+
+## Entrega B2: ciclos de corrección
+
+[`releases/B2/manifest.yaml`](../releases/B2/manifest.yaml) trae seis pases, y cinco tienen a propósito un defecto
+del Bloque 2. Cada ciclo es un PR de corrección, una liberación y un despliegue en QA:
+
+| Ciclo | Cambio en `Desa` | Qué debe pasar en QA | Escenarios |
+| --- | --- | --- | --- |
+| 1 | Entrega B2 con los defectos | Prevuelo `FALTA` por `PPX_VALIDATION` (0009): no arranca ningún pase. 0010 figura aplicado como 0004 | E15, E17 |
+| 2 | 0009 usa `PPX_VALIDATIONS` | 0005 OK; 0006 corta con ORA-00904; reporte de error de la guía | E6 |
+| 3 | 0006 sin la columna inexistente | 0006 intento 2 OK sin repetir 0005; 0007 falla por prerrequisito sin ejecutar | E7, E8 |
+| 4 | Pase nuevo con el riesgo ONCO antes de 0007 | 0007 OK; 0008 `ALERTA` (0 filas) | E14 |
+| 5 | 0008 con `IN ('1', '1.00')` y, a la vez, cambio en 0005 ya aplicado | No se ejecuta nada: "contenido cambió, requiere decisión de CTI" | E10 |
+| 6 | Se deshace el cambio en 0005 | 0008 y 0009 OK; B2 completa en QA. Después la misma etiqueta va a PRD | E1 (B2) |
 
 ## Lo que dejaron los escenarios hasta ahora
 
