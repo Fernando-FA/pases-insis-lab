@@ -32,7 +32,7 @@ puede aprobar un PR propio. En Pacífico cada paso tiene dueño:
 | Liberar (`liberacion`) | Yo | Líder técnico de CTI o responsable de pases: fija la versión que se entrega |
 | Desplegar en QA (`qa`) | Yo | Responsable de pases (Globant) |
 | Desplegar en PRD (`prd`) | Yo, con número de cambio | TI de Pacífico, con número de cambio aprobado; **Prevent self-review** activado |
-| Revertir (`qa-rollback`, `prd-rollback`) | Yo | QA: responsable de pases. PRD: TI de Pacífico + número de cambio |
+| Revertir | Sin workflow por ahora (se retiró tras E11) | A definir; si se automatiza, environments `qa-rollback` y `prd-rollback` |
 
 Flujo resultante: CTI abre el PR → la Compuerta valida → el líder técnico revisa y mergea → libera la etiqueta → el
 despliegue en QA queda esperando a Globant → con QA completo, Pacífico aprueba la misma etiqueta en PRD.
@@ -46,10 +46,9 @@ Lo que el laboratorio mostró sobre aprobar:
   deja dependientes (E11) se detectan cuando la herramienta ya está conectada a la base, después de la aprobación.
   Mejora posible: que el job previo consulte `PASE_ESTADO` en solo lectura y rechace antes de pedir la aprobación.
 - **Cada despliegue pide su propia aprobación**, también cuando hay dos en cola para el mismo ambiente (E12).
-- **QA no revierte lo que está en PRD.** Antes de pedir `qa-rollback`, el pipeline lee el estado de PRD de su última
-  evidencia y rechaza los pases que siguen aplicados allá. Para sacar algo de los dos ambientes: primero PRD (o un
-  pase que lo deshaga por el flujo normal). En Pacífico conviene que ese estado venga de una fuente durable
-  (Blob o una consulta de solo lectura a `PASE_ESTADO` de PRD), porque los artefactos vencen a los 90 días.
+- **QA no revierte lo que está en PRD.** Se probó un workflow de reversión que lo comprobaba antes de pedir la
+  aprobación, leyendo el estado de PRD de su última evidencia. Se retiró del laboratorio: por ahora la reversión no va
+  por pipeline. Si vuelve, debe mantener esa regla.
 
 ## 3. Runners en la red de Pacífico
 

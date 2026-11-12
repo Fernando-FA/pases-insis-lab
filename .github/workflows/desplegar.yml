@@ -1,7 +1,7 @@
 # Instala una etiqueta en un ambiente (secciones 4 a 8 de la guía).
 # Se lanza SIEMPRE sobre una etiqueta rel-QA-*. PRD instala la MISMA etiqueta que ya se desplegó completa en QA.
 # QA se lanza solo al terminar `liberar.yml`; PRD se lanza a mano con el número de cambio.
-# Revertir y armar el paquete manual están en revertir.yml y paquete.yml.
+# El paquete manual está en paquete.yml. La reversión no tiene workflow por ahora: se hace a mano con la guía.
 name: Desplegar pases
 run-name: "desplegar ${{ inputs.ambiente }} · ${{ github.ref_name }}"
 
