@@ -31,9 +31,9 @@ están en [`scripts/escenarios/`](../scripts/escenarios/). Las aprobaciones de e
 | E12 | Dos despliegues simultáneos al mismo ambiente | El segundo espera | ⏳ | |
 | E13 | Paquete manual | Artefacto con scripts y LEEME, sin tocar la base | ✅ 4 scripts `<SEC>_<pase>.sql`, LEEME, hoja e Inventario .xlsx; sin aprobación ni base | [run](https://github.com/Fernando-FA/pases-insis-lab/actions/runs/43119753928) |
 | E14 | Pase sin efecto (`'1'` vs `'1.00'`) | `ALERTA` y se detiene | ⏳ (probado en local, Fase 4) | |
-| E15 | Tabla fuera del catálogo de `ALLOCATE_ID` | Prevuelo `FALTA`, no arranca | ⏳ (probado en local, Fase 4) | |
+| E15 | Tabla fuera del catálogo de `ALLOCATE_ID` | Prevuelo `FALTA`, no arranca | ✅ B2 ciclo 1 (`rel-QA-B2-20261111`): "PPX_VALIDATION no está registrada en INSIS_DEMO_CFG.RB_ID_CONTROL (pase 0009-10015)"; no se ejecutó ningún pase ni se escribió en `PASE_CONTROL` | [run](https://github.com/Fernando-FA/pases-insis-lab/actions/runs/43134603553) |
 | E16 | PR con mojibake (caso 0003) | La Compuerta falla | ✅ PR #11: rechazado con C08 ("texto doblemente codificado"); el PR queda bloqueado | [PR #11](https://github.com/Fernando-FA/pases-insis-lab/pull/11) |
-| E17 | Pase renumerado ya aplicado | No se reejecuta | ⏳ | |
+| E17 | Pase renumerado ya aplicado | No se reejecuta | ✅ B2 ciclo 1: el plan muestra `0010-10004` como "aplicado como 0004-10004 (renumerado)" y no lo programa | [run](https://github.com/Fernando-FA/pases-insis-lab/actions/runs/43134603553) |
 
 ## Entrega B2: ciclos de corrección
 
