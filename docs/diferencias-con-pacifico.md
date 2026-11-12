@@ -46,6 +46,10 @@ Lo que el laboratorio mostró sobre aprobar:
   deja dependientes (E11) se detectan cuando la herramienta ya está conectada a la base, después de la aprobación.
   Mejora posible: que el job previo consulte `PASE_ESTADO` en solo lectura y rechace antes de pedir la aprobación.
 - **Cada despliegue pide su propia aprobación**, también cuando hay dos en cola para el mismo ambiente (E12).
+- **QA no revierte lo que está en PRD.** Antes de pedir `qa-rollback`, el pipeline lee el estado de PRD de su última
+  evidencia y rechaza los pases que siguen aplicados allá. Para sacar algo de los dos ambientes: primero PRD (o un
+  pase que lo deshaga por el flujo normal). En Pacífico conviene que ese estado venga de una fuente durable
+  (Blob o una consulta de solo lectura a `PASE_ESTADO` de PRD), porque los artefactos vencen a los 90 días.
 
 ## 3. Runners en la red de Pacífico
 

@@ -1,5 +1,6 @@
 # Revierte pases de una etiqueta en un ambiente (sección 7 de la guía): solo a pedido de desarrollo, con los scripts
 # ROLLBACK, en orden inverso y sin dejar dependientes aplicados huérfanos. Aprobación separada: <ambiente>-rollback.
+# En QA solo se revierte lo que no está aplicado en PRD (QA tiene siempre al menos lo que tiene PRD).
 name: Revertir pases
 run-name: "revertir ${{ inputs.ambiente }} · ${{ github.ref_name }} · ${{ inputs.pases }}"
 
@@ -22,6 +23,8 @@ on:
 
 permissions:
   contents: read
+  actions: read
+  deployments: read
 
 jobs:
   verificar:
@@ -49,6 +52,17 @@ jobs:
             exit 1
           fi
           { echo "## Reversión pedida · ${{ inputs.ambiente }}"; echo; echo "Etiqueta \`${REF_NAME}\` · pases: **${PASES}**"; } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/checkout@v7
+        if: inputs.ambiente == 'qa'
+
+      - name: QA no revierte lo que está en PRD
+        if: inputs.ambiente == 'qa'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          read -ra pases <<< "$PASES"
+          tools/ci/verificar-prd.sh "${pases[@]}"
 
   revertir:
     name: Revertir en ${{ inputs.ambiente }}
