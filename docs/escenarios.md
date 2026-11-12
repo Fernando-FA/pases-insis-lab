@@ -66,5 +66,6 @@ del Bloque 2. Cada ciclo es un PR de corrección, una liberación y un despliegu
   Una mejora posible es que el job previo consulte `PASE_ESTADO` en solo lectura y rechace antes de pedir aprobación.
 - **E11 dejó QA con menos que PRD, y eso no debe permitirse.** 0007-10013 y 0009-10015 quedaron `REVERTIDO` en QA y
   `APLICADO` en PRD: el próximo cambio se habría probado en QA sobre una base distinta de la de PRD. Se repusieron
-  relanzando `-6` en QA, y `revertir.yml` ahora rechaza en QA, antes de pedir aprobación, todo pase que siga aplicado
-  en PRD (`tools/ci/verificar-prd.sh`, que lee `ESTADO_PRD.csv` de la última evidencia de PRD sin conectarse a PRD).
+  relanzando `-6` en QA. Se agregó la regla "en QA solo se revierte lo que no está aplicado en PRD" y se validó con
+  `-7` ([run](https://github.com/Fernando-FA/pases-insis-lab/actions/runs/43143086161): rechazado sin pedir
+  aprobación). Después **se retiró el workflow de revertir**: por ahora la reversión no se hace por pipeline.

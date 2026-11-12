@@ -16,7 +16,7 @@ releases/<entrega>/manifest.yaml         reemplaza al Inventario Excel (mismas c
 tools/pases/pases.py                     la herramienta (validar · plan · ejecutar · revertir · paquete · inventario)
 tools/pases/tests/                       pruebas con SQLcl simulado
 db/setup/                                esquemas demo, usuario INSIS_DEPLOY y PASE_CONTROL
-.github/workflows/                       pr-validacion · liberar · desplegar · revertir · paquete
+.github/workflows/                       pr-validacion · liberar · desplegar · paquete
 ```
 
 ## Flujo
