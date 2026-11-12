@@ -22,7 +22,7 @@ están en [`scripts/escenarios/`](../scripts/escenarios/). Las aprobaciones de e
 | E3 | PRD sin número de cambio | Bloqueado | ✅ "PRD exige número de cambio ITSM", sin pedir aprobación | [run](https://github.com/Fernando-FA/pases-insis-lab/actions/runs/43119654285) |
 | E4 | Desplegar desde `Desa` (no etiqueta) | Bloqueado | ✅ "Se ejecuta una etiqueta, nunca una rama", sin pedir aprobación | [run](https://github.com/Fernando-FA/pases-insis-lab/actions/runs/43119704688) |
 | E5 | PR con líneas en blanco dentro de un `q'~...~'` (caso 0065) | La Compuerta falla; no se puede mergear | ✅ PR #10: "Compuerta sobre todos los manifiestos" rechaza con C07 (línea 8 del MERGE); el PR queda bloqueado | [PR #10](https://github.com/Fernando-FA/pases-insis-lab/pull/10) |
-| E6 | Error a mitad de la entrega (caso 0046) | Corta en ese pase, reporte de la guía, anteriores `APLICADO` | ⏳ | |
+| E6 | Error a mitad de la entrega (caso 0046) | Corta en ese pase, reporte de la guía, anteriores `APLICADO` | ✅ B2 ciclo 2 (`-2`): 0005-10011 `APLICADO`; 0006-10012 cortó con `ORA-00904: "ORL"."RULE_TYPE_LINK_ID": invalid identifier` y quedó `ERROR`, su MERGE se deshizo (rollback). Reporte "[Pase con error] QA - 0006-10012" con pases en OK y log adjunto | [run](https://github.com/Fernando-FA/pases-insis-lab/actions/runs/43135286515) |
 | E7 | Corrección de E6 por PR, etiqueta nueva | Retoma en el pase que falló (intento 2) | ⏳ | |
 | E8 | Prerrequisito no cumplido (caso 0045) | Falla por prerrequisito sin ejecutar; variante parcial | ⏳ | |
 | E9 | `pases.py` con `--commit` distinto | Se niega a ejecutar | ⏳ (probado en local contra Oracle, Fase 4) | |
