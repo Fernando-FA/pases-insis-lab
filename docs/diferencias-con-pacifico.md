@@ -25,17 +25,32 @@ que **no** es igual y lo que haría falta para llevarlo al repositorio `dev-cti-
 En el laboratorio todo lo aprueba la misma persona y `Desa` exige PR y Compuerta, pero 0 revisiones, porque no se
 puede aprobar un PR propio. En Pacífico cada paso tiene dueño:
 
-| Paso | Laboratorio | Propuesta para Pacífico |
-| --- | --- | --- |
-| PR a `Desa` | Compuerta obligatoria, 0 revisiones | Compuerta obligatoria **y** 1 revisión del líder técnico de CTI (`CODEOWNERS` sobre `DB/` y `releases/`) |
-| Cambios a `tools/` y `.github/` | Igual que el resto | `CODEOWNERS`: responsable de pases (Globant) y plataforma de Pacífico |
-| Liberar (`liberacion`) | Yo | Líder técnico de CTI o responsable de pases: fija la versión que se entrega |
-| Desplegar en QA (`qa`) | Yo | Responsable de pases (Globant) |
-| Desplegar en PRD (`prd`) | Yo, con número de cambio | TI de Pacífico, con número de cambio aprobado; **Prevent self-review** activado |
-| Revertir | Sin workflow por ahora (se retiró tras E11) | A definir; si se automatiza, environments `qa-rollback` y `prd-rollback` |
+Modelo acordado (12-11-2026). En el laboratorio queda solo documentado: con un único usuario, exigir revisiones o
+bloquear la auto-aprobación dejaría sin poder mergear ni aprobar.
 
-Flujo resultante: CTI abre el PR → la Compuerta valida → el líder técnico revisa y mergea → libera la etiqueta → el
-despliegue en QA queda esperando a Globant → con QA completo, Pacífico aprueba la misma etiqueta en PRD.
+| Paso | Laboratorio | Pacífico |
+| --- | --- | --- |
+| PR a `Desa` | Compuerta obligatoria, 0 revisiones | Compuerta obligatoria **y** 1 revisión del líder técnico de CTI, que mergea |
+| Cambios a `tools/` y `.github/` | Igual que el resto | Revisión del responsable de pases (Globant) |
+| Liberar (`liberacion`) | Yo | Líder técnico de CTI: fija la versión que se entrega |
+| Desplegar en QA (`qa`) | Yo | Responsable de pases (Globant) |
+| Desplegar en PRD (`prd`) | Yo, con número de cambio | TI de Pacífico, con número de cambio aprobado; quien lanzó el despliegue no puede aprobarlo |
+
+Flujo: CTI abre el PR → la Compuerta valida → el líder técnico revisa y mergea → libera la etiqueta → el despliegue
+en QA queda esperando a Globant → con QA completo, Pacífico aprueba la misma etiqueta en PRD.
+
+Configuración en `dev-cti-inisis`:
+
+1. `.github/CODEOWNERS`: `DB/` y `releases/` → líder técnico de CTI (o su equipo); `tools/` y `.github/` →
+   responsable de pases.
+2. Protección de `Desa`: PR obligatorio, check **Compuerta** obligatorio y actualizado, **1 aprobación**, revisión de
+   *code owners* obligatoria, descartar aprobaciones si llegan commits nuevos, sin force push ni borrado, también para
+   administradores.
+3. Environment `liberacion`: revisor el líder técnico de CTI; solo la rama `Desa`.
+4. Environment `qa`: revisor el responsable de pases (o un equipo de Globant); solo etiquetas `rel-QA-*`.
+5. Environment `prd`: revisores un equipo de TI de Pacífico, **Prevent self-review** activado; solo etiquetas
+   `rel-QA-*`. El número de cambio sigue siendo obligatorio en el workflow.
+6. Usar equipos de GitHub en lugar de personas, para que una ausencia no frene un pase.
 
 Lo que el laboratorio mostró sobre aprobar:
 
@@ -118,7 +133,7 @@ nuevo por el flujo normal.
 ## 8. Por confirmar con Pacífico
 
 - Cómo se hace hoy el pase a PRD: la guía v1.7 solo describe QA.
-- Quién aprueba cada environment (sección 2) y si `prd` debe exigir dos aprobadores.
+- Nombres de los equipos de GitHub para cada environment y si `prd` debe exigir dos aprobadores.
 - Integración con ITSM: texto libre o validación del número de cambio.
 - Retención de la evidencia: 90 días como artefacto o permanente en Blob.
 - Quién pide y confirma el reinicio de INSIS GEN: el pipeline solo avisa.
