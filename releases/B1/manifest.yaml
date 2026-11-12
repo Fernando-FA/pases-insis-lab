@@ -66,3 +66,14 @@ pases:
     reinicio_insis_gen: true
     depende_de: [0002-10002]
     prerrequisitos: []
+
+  - secuencia: 5
+    pase: 0005-10006
+    sprint: 3
+    us: [10006]
+    task: 20006
+    descripcion: AM · Regla de deducible
+    estado_task: Done
+    reinicio_insis_gen: false
+    depende_de: [0001-10001]
+    prerrequisitos: []
