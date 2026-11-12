@@ -2,7 +2,7 @@ MERGE INTO INSIS_DEMO_CFG.CFG_RULES R
 USING (SELECT '1101' PRODUCT_CODE,
               'KW_DEDUCIBLE_AM' RULE_CODE,
               'KEYWORD' RULE_TYPE,
-              'Deducible según tipo de atención' DESCRIPTION,
+              'Deducible por tipo de atención' DESCRIPTION,
               q'~SELECT CASE
          /* 1) Atención ambulatoria */
          WHEN :ATTENTION_TYPE = 'AMB' THEN 50
