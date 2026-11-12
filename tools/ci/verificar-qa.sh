@@ -8,7 +8,17 @@ ids=$(gh api "repos/${GITHUB_REPOSITORY}/deployments?environment=qa&sha=${sha}&p
 for id in $ids; do
   estado=$(gh api "repos/${GITHUB_REPOSITORY}/deployments/${id}/statuses?per_page=1" --jq '.[0].state // ""')
   if [ "$estado" = "success" ]; then
-    echo "Promoción OK: despliegue ${id} exitoso en QA sobre ${sha}"
+    datos=$(gh api "repos/${GITHUB_REPOSITORY}/deployments/${id}" --jq '"\(.ref) · \(.created_at[:16] | sub("T"; " ")) UTC · por \(.creator.login)"')
+    url=$(gh api "repos/${GITHUB_REPOSITORY}/deployments/${id}/statuses?per_page=1" --jq '.[0].log_url // .[0].target_url // ""')
+    echo "Promoción OK: despliegue ${id} exitoso en QA sobre ${sha} (${datos})"
+    if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+      {
+        echo "### Validado en QA"
+        echo
+        echo "El commit \`${sha:0:7}\` se desplegó completo en QA: ${datos}${url:+ · [ejecución](${url})}"
+        echo
+      } >> "$GITHUB_STEP_SUMMARY"
+    fi
     exit 0
   fi
 done

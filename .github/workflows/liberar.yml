@@ -1,6 +1,7 @@
 # Fija la versión de una entrega (Anexo B de la guía): etiqueta anotada rel-QA-<ENTREGA>-<AAAAMMDD>[-N]
 # sobre el HEAD de Desa, solo si la compuerta pasa. Esa MISMA etiqueta es la que después se instala en PRD.
 # La verificación corre ANTES de pedir la aprobación del environment `liberacion`.
+# Al publicar la etiqueta lanza solo el despliegue en QA, que queda esperando la aprobación de `qa`.
 name: Liberar entrega
 run-name: "liberar ${{ inputs.entrega }}"
 
@@ -41,6 +42,8 @@ jobs:
           exit 1
 
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-python@v7
         with:
@@ -55,6 +58,14 @@ jobs:
         id: commit
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
+      - name: Sin cambios no hay etiqueta nueva
+        run: |
+          ya=$(git tag -l "rel-QA-${ENTREGA}-*" --points-at HEAD --sort=v:refname | tail -1)
+          if [ -n "$ya" ]; then
+            echo "::error title=Sin cambios::Desa no cambió desde ${ya} (mismo commit $(git rev-parse --short HEAD)). Se instala esa etiqueta; no se crea otra."
+            exit 1
+          fi
+
       - name: Compuerta sobre el commit
         run: python tools/pases/pases.py validar --manifiesto "releases/${ENTREGA}/manifest.yaml"
 
@@ -65,6 +76,7 @@ jobs:
     environment: liberacion
     permissions:
       contents: write
+      actions: write
     env:
       SHA: ${{ needs.verificar.outputs.sha }}
       ALCANCE: ${{ inputs.alcance }}
@@ -103,8 +115,16 @@ jobs:
           git tag -a "$etq" "$SHA" --cleanup=verbatim -F "$RUNNER_TEMP/mensaje.txt"
           git push origin "refs/tags/${etq}"
           git ls-remote --tags origin "$etq"
+          echo "etiqueta=${etq}" >> "$GITHUB_ENV"
           {
             echo "## Etiqueta publicada: \`${etq}\`"
             echo
             echo "Commit \`${SHA}\`"
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Lanzar el despliegue en QA (queda esperando aprobación)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run desplegar.yml --ref "$etiqueta" -f ambiente=qa
+          echo "Despliegue en QA lanzado: aprobar \`qa\` en Actions → Desplegar pases (\`${etiqueta}\`)." >> "$GITHUB_STEP_SUMMARY"

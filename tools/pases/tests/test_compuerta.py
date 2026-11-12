@@ -111,3 +111,14 @@ def test_siguiente_etiqueta(repo):
     repo.etiquetar("rel-QA-B1-20261111-2")
     assert pases.siguiente_etiqueta(repo.raiz, "qa", "B1", "20261111") == "rel-QA-B1-20261111-3"
     assert pases.siguiente_etiqueta(repo.raiz, "prd", "B1", "20261111") == "rel-PRD-B1-20261111"
+
+
+def test_resumen_marca_nuevos_y_modificados(repo):
+    m = pases.manifiesto_o_error(repo.manifiesto)
+    t = pases.resumen_entrega(repo.raiz, m, "rel-QA-B1-20261111", "qa", None)
+    assert t.count("**nuevo**") == 4
+    f = repo.archivo("DB/INSIS_DEMO_CFG/Tables/cfg_products/cfg_products.10003.UPDATE.sql")
+    f.write_text(f.read_text(encoding="utf-8") + "-- ajuste\n", encoding="utf-8")
+    repo.commit("modifica 0003")
+    t = pases.resumen_entrega(repo.raiz, m, "rel-QA-B1-20261111-2", "qa", "rel-QA-B1-20261111")
+    assert "| 03 | 0003-10003 |" in t and t.count("**modificado**") == 1 and t.count("sin cambios") == 3
