@@ -1,6 +1,6 @@
 """Compuerta y analizador léxico (Anexo E de la guía)."""
 import pases
-from conftest import RAIZ_REAL
+from conftest import DATOS
 
 Q_CON_BLANCOS = """MERGE INTO T USING (SELECT q'~SELECT CASE
          WHEN 1 = 1 THEN 1
@@ -34,8 +34,8 @@ def test_lexer_codigo_sin_literales():
     assert "ALLOCATE_ID" not in a.codigo
 
 
-def test_repo_real_aprueba():
-    h = pases.compuerta(RAIZ_REAL, pases.manifiestos_del_repo(RAIZ_REAL))
+def test_datos_de_prueba_aprueban():
+    h = pases.compuerta(DATOS, pases.manifiestos_del_repo(DATOS))
     assert chequeos(h) == []
 
 

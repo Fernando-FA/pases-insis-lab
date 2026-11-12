@@ -18,7 +18,7 @@ están en [`scripts/escenarios/`](../scripts/escenarios/). Las aprobaciones de e
 | # | Escenario | Esperado | Obtenido | Ejecución |
 | --- | --- | --- | --- | --- |
 | E1 | Camino feliz: B1 en QA y la misma etiqueta en PRD con número de cambio | QA y PRD completos; `PASE_ESTADO` coincide | ✅ `rel-QA-B1-20261111-4` en PRD con `CHG-0001`: 4/4 OK al primer intento en el runner PRD. Pase, estado y checksum iguales en QA y PRD; mismos datos | [QA](https://github.com/Fernando-FA/pases-insis-lab/actions/runs/43118519148) · [PRD](https://github.com/Fernando-FA/pases-insis-lab/actions/runs/43118997577) |
-| E2 | PRD con una etiqueta que no pasó por QA | Bloqueado en "Promoción" sin pedir aprobación | ⏳ Pendiente. Un primer intento con `-5` no aplicaba: apuntaba al mismo commit que `-4` (ya completo en QA), así que la promoción la aceptó con razón y no ejecutó nada. Se repite con un commit nuevo | [intento con -5](https://github.com/Fernando-FA/pases-insis-lab/actions/runs/43120901139) |
+| E2 | PRD con una etiqueta que no pasó por QA | Bloqueado en "Promoción" sin pedir aprobación | ✅ `rel-QA-B1-20261111-7` (commit nuevo `521ac4c`): su despliegue en QA se rechazó en la aprobación y PRD con `CHG-0002` se detuvo en "Promoción": "no tiene un despliegue exitoso en QA". Sin pedir aprobación ni tocar la base. (Un intento previo con `-5` no aplicaba: era el mismo commit que `-4`, ya completo en QA) | [liberación](https://github.com/Fernando-FA/pases-insis-lab/actions/runs/43132451463) · [QA rechazado](https://github.com/Fernando-FA/pases-insis-lab/actions/runs/43132564875) · [PRD](https://github.com/Fernando-FA/pases-insis-lab/actions/runs/43132687201) |
 | E3 | PRD sin número de cambio | Bloqueado | ✅ "PRD exige número de cambio ITSM", sin pedir aprobación | [run](https://github.com/Fernando-FA/pases-insis-lab/actions/runs/43119654285) |
 | E4 | Desplegar desde `Desa` (no etiqueta) | Bloqueado | ✅ "Se ejecuta una etiqueta, nunca una rama", sin pedir aprobación | [run](https://github.com/Fernando-FA/pases-insis-lab/actions/runs/43119704688) |
 | E5 | PR con líneas en blanco dentro de un `q'~...~'` (caso 0065) | La Compuerta falla; no se puede mergear | ⏳ | |
@@ -43,3 +43,6 @@ están en [`scripts/escenarios/`](../scripts/escenarios/). Las aprobaciones de e
   misma versión; por eso `liberar.yml` ya no crea una etiqueta si `Desa` no cambió.
 - **Quien aprueba necesita ver qué aprueba.** El job previo publica "Qué se instala": pases de la etiqueta, cuáles
   son nuevos o modificados respecto de la anterior y, en PRD, el despliegue de QA que validó ese commit.
+- **Las pruebas de la herramienta no deben depender de los pases del repositorio.** El primer intento de E5/E16
+  falló en "Pruebas" y no en "Validar pases": las pruebas copiaban `DB/` y `releases/` reales, así que cualquier pase
+  nuevo en B1, aunque fuera correcto, las rompía. Ahora usan una copia fija en `tools/pases/tests/datos/`.

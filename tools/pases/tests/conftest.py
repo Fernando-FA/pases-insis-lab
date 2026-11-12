@@ -7,7 +7,8 @@ import pytest
 
 AQUI = Path(__file__).resolve().parent
 sys.path.insert(0, str(AQUI.parent))
-RAIZ_REAL = AQUI.parents[2]
+# Copia fija de una entrega B1 para las pruebas: no depende de los pases que se agreguen al repositorio.
+DATOS = AQUI / "datos"
 FAKE_SQL = [sys.executable, str(AQUI / "fake_sql.py")]
 
 import pases  # noqa: E402
@@ -45,7 +46,7 @@ def repo(tmp_path) -> Repo:
     raiz = tmp_path / "repo"
     raiz.mkdir()
     for d in ("DB", "releases"):
-        shutil.copytree(RAIZ_REAL / d, raiz / d, ignore=shutil.ignore_patterns("Releases"))
+        shutil.copytree(DATOS / d, raiz / d)
     (raiz / ".gitignore").write_text("DB/Releases/\n", encoding="utf-8")
     git(raiz, "init", "-q", "-b", "Desa")
     git(raiz, "config", "user.name", "Pruebas")
